@@ -1,0 +1,10 @@
+numpy
+pydantic
+fastapi
+uvicorn
+motor
+pymongo[snappy,gssapi,srv,tls]
+python-multipart
+python-dotenv
+soundfile
+sounddevice
