@@ -13,6 +13,7 @@ from gridfs.errors import NoFile
 from dotenv import load_dotenv
 import os
 import io
+import base64
 import asyncio
 
 load_dotenv()
@@ -23,7 +24,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
@@ -45,7 +46,7 @@ recording_active = False
 audio_files = []
 
 ### HELPER FUNCTIONS
-
+"""
 async def detect_sound():
     global recording_active
     while recording_active:
@@ -70,7 +71,7 @@ async def detect_sound():
 
 def get_file_name():
     now = dt.now().strftime("%m-%d_%Hh-%Mm-%Ss")
-    file_name = f"sleep_recording_{now}.wav"
+    file_name = f"sleep_recording_{now}.mp3"
     return file_name
 
 async def save_file_to_server(audio, file_name):
@@ -79,11 +80,14 @@ async def save_file_to_server(audio, file_name):
 
      audio_buffer.seek(0) # resets in-memory buffer position to 0 so a new audio data can be read at position 0
      await fs.upload_from_stream(file_name, audio_buffer) # uploads the audio data in the buffer to mongodb gridfs under file_name
+"""
 
+def encode_audio_to_base64(audio_data):
+    return base64.b64encode(audio_data).decode('utf-8')
 
 ### API CALLS
 
-@app.post("/start-recording")
+"""@app.post("/start-recording")
 async def start_recording():
     global recording_active
     if recording_active:
@@ -98,19 +102,23 @@ async def stop_recording():
     if not recording_active:
         return {"message": "Recording is already inactive"}
     recording_active = False
-    return {"message": "Recording stopped"}
+    return {"message": "Recording stopped"}"""
 
 @app.post("/upload-audio")
 async def upload_audio(file: UploadFile = File(...)): # UploadFile is a class used to handle file uploads, File(...) the input will be a file and the file input is required as denoted by ...
      try:
         audio_data = await file.read() # all raw binary data is stored into audio_data
-
         audio_buffer = io.BytesIO(audio_data) # the in-memory binary stream contains the audio binary data
         file_id = await fs.upload_from_stream(file.filename, audio_buffer) # uploads the name and audio binary data, returns the generated id for the stored file
         return {"message": "Audio uploaded successfully", "_id": str(file_id)}
      except Exception as e:
           raise HTTPException(status_code=500, detail=f"Error uploading data {e}")
-
+     
+@app.get("/download-file")
+async def download_file(file_id: str):
+     grid_out = await fs.open_download_stream(ObjectId(file_id))
+     with open(f"{file_id}_output.mp3", "wb") as f:
+          f.write(await grid_out.read())
 
 @app.get("/audio-files")
 async def get_audio_files():
@@ -120,7 +128,8 @@ async def get_audio_files():
     for file in files:
          file_data = {
             "file_id": str(file['_id']), # _id is mongodb's ObjectId
-            "filename": file['filename'] # get the filename stored in mongodb
+            "filename": file['filename'], # get the filename stored in mongodb
+            "audio_url": f"/audio-file/play/{file['_id']}",
          }
          file_list.append(file_data)
     return file_list
@@ -129,7 +138,8 @@ async def get_audio_files():
 async def play_audio(file_id: str):
      try:
           grid_out = await fs.open_download_stream(ObjectId(file_id)) # retrieve audio file by ObjectId
-          return StreamingResponse(grid_out, media_type="audio/wav") # stream audio response
+          print("stream successfully")
+          return StreamingResponse(grid_out, media_type="audio/mpeg") # stream audio response
      except Exception as e:
           raise HTTPException(status_code=404, detail=f"File not found: {e}")
 
