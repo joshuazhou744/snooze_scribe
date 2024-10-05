@@ -139,7 +139,7 @@ async def play_audio(file_id: str):
      try:
           grid_out = await fs.open_download_stream(ObjectId(file_id)) # retrieve audio file by ObjectId
           print("stream successfully")
-          return StreamingResponse(grid_out, media_type="audio/mpeg") # stream audio response
+          return StreamingResponse(grid_out, media_type="audio/webm") # stream audio response
      except Exception as e:
           raise HTTPException(status_code=404, detail=f"File not found: {e}")
 

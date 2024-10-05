@@ -4,7 +4,7 @@ import axios from 'axios'
 const AudioRecorder = () => {
   const [audioFiles, setAudioFiles] = useState([]);
   const [isRecording, setIsRecording] = useState(false)
-  const [energyThreshold, setEnergyThreshold] = useState(0.005)
+  const [energyThreshold, setEnergyThreshold] = useState(1)
   const mediaRecorderRef = useRef(null)
   const analyserRef = useRef(null)
   const audioContextRef = useRef(null)
@@ -36,7 +36,7 @@ const AudioRecorder = () => {
   const getFileName = () => {
     const now = new Date()
     const formattedDate = `${now.getMonth() + 1}-${now.getDate()}-${now.getFullYear()}_${now.getHours()}h-${now.getMinutes()}m-${now.getSeconds()}s`
-    return `sleep_recording_${formattedDate}.mp3`
+    return `sleep_recording_${formattedDate}.webm`
   }
 
   const startRecording = async () => {
@@ -47,12 +47,13 @@ const AudioRecorder = () => {
       const source = audioContextRef.current.createMediaStreamSource(stream) // converts audio stream from mic to something the AudioContext() can process, source is the audio source node created from mic stream
 
       analyserRef.current = audioContextRef.current.createAnalyser() // creates Analyser node that can read and analyze audio in real time
-      analyserRef.current.fftSize = 2048; // fft = fast fourier transform, size 2048, breaks audio into frequency components
-      source.connect(analyserRef.current) // connect audio stream to analyzer for processing
+      analyserRef.current.fftSize = 8192; // fft = fast fourier transform, size 2048, breaks audio into frequency components
+     
+      source.connect(analyserRef.current) // connect audio stream to analyser
 
       mediaRecorderRef.current = new MediaRecorder(stream, {mimeType: 'audio/webm'}) // MediaRecorder captures and stores audio in chunks
       mediaRecorderRef.current.ondataavailable = handleDataAvailable // trigger handleDataAvailable every 5 seconds
-      mediaRecorderRef.current.start(5000); // breaks recording in 5 second intervals
+      mediaRecorderRef.current.start(6000); // breaks recording in 6 second intervals
     } catch (error) {
       console.error('Error accessing microphone', error)
     }
@@ -80,7 +81,7 @@ const AudioRecorder = () => {
         mediaRecorderRef.current.onstop = () => {
           setTimeout(() => {
             if (mediaRecorderRef.current && mediaRecorderRef.current.state === "inactive") {
-              mediaRecorderRef.current.start(5000);
+              mediaRecorderRef.current.start(6000);
             }
           }, 100); 
         }
@@ -107,6 +108,7 @@ const AudioRecorder = () => {
     }
   };
 
+  let rollingAverage = 0.005;
   const checkEnergyLevel = () => {
     const bufferLength = analyserRef.current.fftSize; // gets the time window of the recorded data, can use this to get average energy in the 5s interval, higher fft window means more detailed processing
     const dataArray = new Uint8Array(bufferLength) // creates new array of 8-bit unassigned numbers
@@ -120,7 +122,13 @@ const AudioRecorder = () => {
     }
     const rms = Math.sqrt(sumSquares / bufferLength) // calculate rms energy level
 
-    return rms > energyThreshold
+    rollingAverage = (rollingAverage * 0.75) + (rms * 0.25);
+    rollingAverage = Math.max(0.001, Math.min(rollingAverage, 0.1));
+
+    let normalizedRMS = rms / rollingAverage;
+
+    console.log("Normalized RMS Energy: " + normalizedRMS)
+    return normalizedRMS > energyThreshold
   }
 
   const stopRecording = () => {
@@ -191,7 +199,8 @@ const AudioRecorder = () => {
   return (
     <div>
       <h2>Audio Recorder with Energy Detection</h2>
-      <input type="number" placeholder='Energy Threshold' value={energyThreshold} onChange={(e) => setEnergyThreshold(parseFloat(e.target.value))} step="0.001" min="0" max="0.5"/>
+      <label>Energy Threshold </label>
+      <input type="number" placeholder='Energy Threshold' value={energyThreshold} onChange={(e) => setEnergyThreshold(parseFloat(e.target.value))} step="0.1" min="0" max="10"/>
       <br/>
       <button onClick={() => setIsRecording(true)} disabled={isRecording}>
         Start Recording
