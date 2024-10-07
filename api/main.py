@@ -20,6 +20,7 @@ import hashlib
 
 import tempfile
 import subprocess
+import shutil
 
 
 load_dotenv()
@@ -148,8 +149,18 @@ def convert_webm_to_mp4(webm_data: bytes) -> str:
      with tempfile.NamedTemporaryFile(suffix="mp4", delete=False) as temp_mp4_file:
           mp4_path = temp_mp4_file.name
 
-     ffmpeg_command = ['ffmpeg', '-i', webm_path, '-c:a', 'aac', mp4_path]
-     subprocess.run(ffmpeg_command, check=True)
+     try:
+          ffmpeg_command = [
+               'ffmpeg',
+               '-y',  # Overwrite output files without asking
+               '-i', webm_path,
+               '-c:a', 'aac',
+               mp4_path
+          ]
+          subprocess.run(ffmpeg_command, check=True)
+     finally:
+          if os.path.exists(webm_path):
+               os.remove(webm_path)
      return mp4_path
 
 ### API CALLS
@@ -225,10 +236,12 @@ async def play_audio(file_id: str, authorization: str = Header(None)):
           mp4_path = convert_webm_to_mp4(webm_data)
           def mp4_streamer():
                with open(mp4_path, "rb") as mp4_file:
-                yield from mp4_file
-                
+                    yield from mp4_file
+               if os.path.exists(mp4_path):
+                    os.remove(mp4_path)
+
           print("stream successfully")
-          return StreamingResponse(grid_out, media_type="audio/mp4;codecs=aac") # stream audio response
+          return StreamingResponse(mp4_streamer(), media_type="audio/mp4;codecs=aac") # stream audio response
      except Exception as e:
           raise HTTPException(status_code=404, detail=f"File not found: {e}")
 
