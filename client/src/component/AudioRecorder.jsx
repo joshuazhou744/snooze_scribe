@@ -34,11 +34,13 @@ const AudioRecorder = () => {
       return;
     }
     try {
-      const token = await getAccessTokenSilently();
-      const response = await axios.get(`${apiUrl}/audio-files`, {
-        headers: {Authorization: `Bearer ${token}`}
-      })
-      setAudioFiles(response.data)
+        const token = await getAccessTokenSilently({
+            audience: audience,
+        });
+        const response = await axios.get(`${apiUrl}/audio-files`, {
+            headers: {Authorization: `Bearer ${token}`}
+        })
+        setAudioFiles(response.data)
     } catch (error) {
       console.error("Error fetching files", error)
     }
@@ -205,7 +207,9 @@ const AudioRecorder = () => {
 
   const handleDelete = async (file_id) => {
     try {
-      const token = await getAccessTokenSilently();
+        const token = await getAccessTokenSilently({
+            audience: audience,
+        });
       const response = await axios.delete(`${apiUrl}/audio-file/${file_id}`, {
         headers: {
           Authorization: `Bearer ${token}`
