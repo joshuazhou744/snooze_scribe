@@ -10,3 +10,4 @@ pydub
 python-jose 
 authlib
 requests
+ffmpeg

@@ -12,14 +12,14 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 import os
 import io
-import base64
-import asyncio
-import logging
 
 from jose import jwt, JWTError
 from typing import List
 import requests
 import hashlib
+
+import tempfile
+import subprocess
 
 
 load_dotenv()
@@ -141,6 +141,17 @@ def get_user_gridfs(user_id: str):
      gridfs_files = motor.motor_asyncio.AsyncIOMotorGridFSBucket(db, bucket_name=user_collection_name)
      return gridfs_files
 
+def convert_webm_to_mp4(webm_data: bytes) -> str:
+     with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_webm_file:
+          webm_path = temp_webm_file.name
+          temp_webm_file.write(webm_data)
+     with tempfile.NamedTemporaryFile(suffix="mp4", delete=False) as temp_mp4_file:
+          mp4_path = temp_mp4_file.name
+
+     ffmpeg_command = ['ffmpeg', '-i', webm_path, '-c:a', 'aac', mp4_path]
+     subprocess.run(ffmpeg_command, check=True)
+     return mp4_path
+
 ### API CALLS
 
 """@app.post("/start-recording")
@@ -210,6 +221,12 @@ async def play_audio(file_id: str, authorization: str = Header(None)):
      gridfs_files = get_user_gridfs(user_id)
      try:
           grid_out = await gridfs_files.open_download_stream(ObjectId(file_id)) # retrieve audio file by ObjectId
+          webm_data = await grid_out.read()
+          mp4_path = convert_webm_to_mp4(webm_data)
+          def mp4_streamer():
+               with open(mp4_path, "rb") as mp4_file:
+                yield from mp4_file
+                
           print("stream successfully")
           return StreamingResponse(grid_out, media_type="audio/mp4;codecs=aac") # stream audio response
      except Exception as e:
