@@ -6,8 +6,6 @@ motor
 pymongo[snappy,gssapi,srv,tls]
 python-multipart
 python-dotenv
-soundfile
-sounddevice
 pydub
 python-jose 
 authlib

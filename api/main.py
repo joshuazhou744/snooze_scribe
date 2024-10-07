@@ -3,8 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 import motor.motor_asyncio
 from fastapi.responses import StreamingResponse
 
-import soundfile as sf
-import sounddevice as sd
 import numpy as np
 from datetime import datetime as dt
 from bson import ObjectId
