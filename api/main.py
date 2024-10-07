@@ -140,7 +140,7 @@ def get_user_gridfs(user_id: str):
      hashed_user_id = hashlib.sha256(user_id.encode('utf-8')).hexdigest()
 
      db = client['audio']
-     user_collection_name = f"{hashed_user_id}.files"
+     user_collection_name = f"{hashed_user_id}"
      gridfs_files = motor.motor_asyncio.AsyncIOMotorGridFSBucket(db, bucket_name=user_collection_name)
      return gridfs_files
 
