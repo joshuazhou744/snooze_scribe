@@ -16,7 +16,7 @@ const AudioRecorder = () => {
   const analyserRef = useRef(null)
   const mediaStreamRef = useRef(null)
   const audioPlayerRef = useRef(null)
-  const apiUrl = "http://localhost:8000"
+  const apiUrl = import.meta.env.VITE_API_URL;
   const audience= import.meta.env.VITE_AUTH0_AUDIENCE;
 
   useEffect(() => {
