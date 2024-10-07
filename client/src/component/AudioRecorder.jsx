@@ -16,7 +16,7 @@ const AudioRecorder = () => {
   const analyserRef = useRef(null)
   const mediaStreamRef = useRef(null)
   const audioPlayerRef = useRef(null)
-  const apiUrl = import.meta.env.VITE_API_URL;
+  const apiUrl = "http://localhost:8000"
   const audience= import.meta.env.VITE_AUTH0_AUDIENCE;
 
   useEffect(() => {
@@ -49,7 +49,7 @@ const AudioRecorder = () => {
   const getFileName = () => {
     const now = new Date()
     const formattedDate = `${now.getMonth() + 1}-${now.getDate()}-${now.getFullYear()}_${now.getHours()}h-${now.getMinutes()}m-${now.getSeconds()}s`
-    return `sleep_recording_${formattedDate}mp4`
+    return `sleep_recording_${formattedDate}.mp4`
   }
 
   const startRecording = async () => {

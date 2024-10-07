@@ -146,7 +146,7 @@ def convert_webm_to_mp4(webm_data: bytes) -> str:
      with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_webm_file:
           webm_path = temp_webm_file.name
           temp_webm_file.write(webm_data)
-     with tempfile.NamedTemporaryFile(suffix="mp4", delete=False) as temp_mp4_file:
+     with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as temp_mp4_file:
           mp4_path = temp_mp4_file.name
 
      try:
@@ -241,7 +241,7 @@ async def play_audio(file_id: str, authorization: str = Header(None)):
                     os.remove(mp4_path)
 
           print("stream successfully")
-          return StreamingResponse(mp4_streamer(), media_type="audio/mp4;codecs=aac") # stream audio response
+          return StreamingResponse(mp4_streamer(), media_type="audio/mp4; codecs=aac") # stream audio response
      except Exception as e:
           raise HTTPException(status_code=404, detail=f"File not found: {e}")
 
