@@ -5,7 +5,7 @@ export default function LogoutButton({className }) {
 
     const {logout} = useAuth0();
   return (
-    <button onClick={() => logout({returnTo: `${window.location.origin}/callback`})} className={`auth-button ${className}`}>
+    <button onClick={() => logout({returnTo: window.location.origin})} className={`auth-button ${className}`}>
         Log Out
     </button>
   )

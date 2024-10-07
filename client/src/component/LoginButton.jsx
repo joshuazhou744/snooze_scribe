@@ -10,5 +10,5 @@ export default function LoginButton({className}) {
       });
     };
 
-  return <button onClick={() => handleLogin()} className={`auth-button ${className}`}>Log In</button>
+  return <button onClick={handleLogin} className={`auth-button ${className}`}>Log In</button>
 }
