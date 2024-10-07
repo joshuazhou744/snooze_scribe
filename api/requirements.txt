@@ -9,4 +9,5 @@ python-dotenv
 soundfile
 sounddevice
 pydub
-python-jose authlib
+python-jose 
+authlib
