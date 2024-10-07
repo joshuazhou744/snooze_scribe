@@ -49,7 +49,7 @@ const AudioRecorder = () => {
   const getFileName = () => {
     const now = new Date()
     const formattedDate = `${now.getMonth() + 1}-${now.getDate()}-${now.getFullYear()}_${now.getHours()}h-${now.getMinutes()}m-${now.getSeconds()}s`
-    return `sleep_recording_${formattedDate}.webm`
+    return `sleep_recording_${formattedDate}.mp4`
   }
 
   const startRecording = async () => {
@@ -78,7 +78,7 @@ const AudioRecorder = () => {
       console.error("No media stream available.");
       return;
     }
-    mediaRecorderRef.current = new MediaRecorder(mediaStreamRef.current, { mimeType: 'audio/webm; codecs=opus' });
+    mediaRecorderRef.current = new MediaRecorder(mediaStreamRef.current, { mimeType: 'audio/mp4' });
 
     mediaRecorderRef.current.ondataavailable = handleData;
 
