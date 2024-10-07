@@ -41,7 +41,6 @@ app.add_middleware(
 
 AUTH0_AUDIENCE = os.getenv("AUTH0_AUDIENCE")
 AUTH0_DOMAIN = os.getenv('AUTH0_DOMAIN')
-AUTH0_PUBLIC_KEY = os.getenv('AUTH0_PUBLIC_KEY')
 MONGODB_URL = os.getenv("MONGODB_URL")
 
 client = motor.motor_asyncio.AsyncIOMotorClient(MONGODB_URL)
