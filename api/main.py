@@ -211,7 +211,7 @@ async def play_audio(file_id: str, authorization: str = Header(None)):
      try:
           grid_out = await gridfs_files.open_download_stream(ObjectId(file_id)) # retrieve audio file by ObjectId
           print("stream successfully")
-          return StreamingResponse(grid_out, media_type="audio/mp4") # stream audio response
+          return StreamingResponse(grid_out, media_type="audio/m4a;codecs=aac") # stream audio response
      except Exception as e:
           raise HTTPException(status_code=404, detail=f"File not found: {e}")
 
