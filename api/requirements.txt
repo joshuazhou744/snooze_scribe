@@ -9,3 +9,4 @@ python-dotenv
 pydub
 python-jose 
 authlib
+requests
