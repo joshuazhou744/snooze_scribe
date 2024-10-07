@@ -22,7 +22,7 @@ export default function Auth0ProviderWithHistory({children}) {
                 clientId={clientId}
                 authorizationParams={{
                     audience: audience,
-                    redirect_uri: window.location.origin,
+                    redirect_uri: `${window.location.origin}/callback`,
                 }}
                 onRedirectCallback={onRedirectCallback}
                 >
