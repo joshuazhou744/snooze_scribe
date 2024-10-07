@@ -78,7 +78,7 @@ const AudioRecorder = () => {
       console.error("No media stream available.");
       return;
     }
-    mediaRecorderRef.current = new MediaRecorder(mediaStreamRef.current, { mimeType: 'audio/m4a;codecs=aac' });
+    mediaRecorderRef.current = new MediaRecorder(mediaStreamRef.current, { mimeType: 'audio/mp4; codecs=aac' });
 
     mediaRecorderRef.current.ondataavailable = handleData;
 
