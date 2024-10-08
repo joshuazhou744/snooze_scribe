@@ -23,6 +23,7 @@ v1 (10/07/2024):
 v2 (10/07/2024): 
 - Overhauled MediaRecorder API to use RecordRTC as the web recorder; now records in .mp4 format
 - Able to record on mobile browsers; still cannot play recorded audio, fix soon
+- Implemented Auth0 Authentication for a user system
 
 v3 (10/08/2024): 
 - Implemented WaveSurfer.js and its Timeline plugin as audio player and waveform visualizer with user interface
