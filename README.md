@@ -8,6 +8,12 @@ https://snooze-scribe.vercel.app
 
 ## Versions and Updates:
 
+v0 (10/02/2024):
+- Snooze Scribe run on local development server with audio recording and handling on the python backend
+- Audio files are saved locally in an "audio" folder in the project directory
+- Legacy code still exists (commented out) in main.py of the api if you want to run this locally
+- Uses PyAudio SoundDevice and SoundFile to record and process audio data, possibly more reliable than RecordRTC
+
 v1 (10/07/2024): 
 - Deployed on Vercel
 - Saves audio as .webm
