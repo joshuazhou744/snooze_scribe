@@ -219,7 +219,7 @@ async def get_audio_files(authorization: str = Header(None)):
          file_data = {
             "file_id": str(file['_id']), # _id is mongodb's ObjectId
             "filename": file['filename'], # get the filename stored in mongodb
-            "audio_url": f"/audio-file/play/{file['_id']}",
+            "audio_url": f"audio-file/play/{file['_id']}",
          }
          file_list.append(file_data)
     return file_list

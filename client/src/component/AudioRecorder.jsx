@@ -4,8 +4,7 @@ import RecordRTC from 'recordrtc';
 import LoginButton from './LoginButton';
 import LogoutButton from './LogoutButton';
 import axios from 'axios'
-import WaveSurfer from 'wavesurfer.js';
-import RegionsPlugin from 'wavesurfer.js/dist/plugin/wavesurfer.regions.min.js';
+import Waveform from './Waveform';
 import './AudioRecorder.css';
 
 const AudioRecorder = () => {
@@ -14,9 +13,9 @@ const AudioRecorder = () => {
   const [isRecording, setIsRecording] = useState(false)
   const isRecordingRef = useRef(isRecording);
   const [energyThreshold, setEnergyThreshold] = useState(0.002)
+  const [token, setToken] = useState(null);
   const recorderRef = useRef(null);
   const mediaStreamRef = useRef(null)
-  const audioPlayerRef = useRef(null)
   const apiUrl = import.meta.env.VITE_API_URL;
   const audience= import.meta.env.VITE_AUTH0_AUDIENCE;
 
@@ -36,8 +35,9 @@ const AudioRecorder = () => {
     }
     try {
         const token = await getAccessTokenSilently({
-            audience: audience,
+           audience: audience,
         });
+        setToken(token)
         const response = await axios.get(`${apiUrl}/audio-files`, {
             headers: {Authorization: `Bearer ${token}`}
         })
@@ -87,12 +87,16 @@ const AudioRecorder = () => {
   const processAudioChunk = (audioBlob) => {
     setTimeout(async () => {
       const rms = await calculateRMS(audioBlob);
-      console.log("RMS ENERGY: ", rms);
-      if (rms > energyThreshold) {
-        await uploadAudioChunk(audioBlob);
-        console.log('Audio Uploaded');
-      } else {
-        console.log('Audio Discarded due to low energy');
+      try {
+        console.log("RMS ENERGY: ", rms);
+        if (rms > energyThreshold) {
+          await uploadAudioChunk(audioBlob);
+          console.log('Audio Uploaded');
+        } else {
+          console.log('Audio Discarded due to low energy');
+        }
+      } catch (err) {
+        console.error("Error processing chunk", err)
       }
     }, 0);
   };
@@ -140,7 +144,9 @@ const AudioRecorder = () => {
 
   const uploadAudioChunk = async (audioData) => {
     try {
-      const token = await getAccessTokenSilently();
+      const token = await getAccessTokenSilently({
+        audience: audience,
+      });
       const formData = new FormData() // holds audio file data: name, audio, and eventually the id
       const fileName = getFileName() // generate unique dated name
       formData.append('file', audioData, fileName) // add necessary info to the object formData
@@ -158,46 +164,11 @@ const AudioRecorder = () => {
     fetchAudioFiles();
   }
 
-  const playAudio = async (audioUrl) => {
-    if (audioPlayerRef.current) {
-      try {
-        const token = await getAccessTokenSilently({
-          audience: audience,
-        });
-        const response = await axios.get(audioUrl, {
-          responseType: 'blob',
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        })
-        const blob = response.data;
-        const url = URL.createObjectURL(blob)
-        audioPlayerRef.current.src = url;
-        const playPromise = audioPlayerRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              console.log('playing audio')
-            })
-            .catch(error => {
-              console.error("playback failed", error)
-            })
-        }
-        audioPlayerRef.current.onended = () => {
-          URL.revokeObjectURL(url)
-        }
-      
-      } catch (error) {
-        console.error('Error fetching audio', error);
-      }
-    }
-  };
-
   const handleDelete = async (file_id) => {
     try {
-        const token = await getAccessTokenSilently({
-            audience: audience,
-        });
+      const token = await getAccessTokenSilently({
+        audience: audience,
+      });
       const response = await axios.delete(`${apiUrl}/audio-file/${file_id}`, {
         headers: {
           Authorization: `Bearer ${token}`
@@ -258,13 +229,10 @@ const AudioRecorder = () => {
             <li key={file.file_id} className="audio-file-item">
               <span className="file-name">{file.filename}</span>
               <div className="file-actions">
-                <button
-                  onClick={() => playAudio(`${apiUrl}/audio-file/play/${file.file_id}`)}
-                  disabled={isRecording}
-                  className="play-button"
-                >
-                  Play
-                </button>
+                <Waveform
+                  audioUrl={`${apiUrl}/${file.audio_url}`}
+                  token={token}
+                />
                 <button onClick={() => handleDelete(file.file_id)} className="delete-button">
                   Delete
                 </button>
@@ -273,10 +241,6 @@ const AudioRecorder = () => {
           ))}
         </ul>
       </div>
-
-      <audio ref={audioPlayerRef} controls className="audio-player">
-        Your browser does not support the audio element.
-      </audio>
     </div>
   )}
 </div>
