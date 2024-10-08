@@ -142,7 +142,7 @@ def get_user_gridfs(user_id: str):
      gridfs_files = motor.motor_asyncio.AsyncIOMotorGridFSBucket(db, bucket_name=user_collection_name)
      return gridfs_files
 
-def convert_webm_to_mp4(webm_data: bytes) -> str:
+"""def convert_webm_to_mp4(webm_data: bytes) -> str:
      with tempfile.NamedTemporaryFile(suffix=".webm", delete=False) as temp_webm_file:
           webm_path = temp_webm_file.name
           temp_webm_file.write(webm_data)
@@ -161,7 +161,7 @@ def convert_webm_to_mp4(webm_data: bytes) -> str:
      finally:
           if os.path.exists(webm_path):
                os.remove(webm_path)
-     return mp4_path
+     return mp4_path"""
 
 ### API CALLS
 
@@ -232,16 +232,16 @@ async def play_audio(file_id: str, authorization: str = Header(None)):
      gridfs_files = get_user_gridfs(user_id)
      try:
           grid_out = await gridfs_files.open_download_stream(ObjectId(file_id)) # retrieve audio file by ObjectId
-          webm_data = await grid_out.read()
+          """webm_data = await grid_out.read()
           mp4_path = convert_webm_to_mp4(webm_data)
           def mp4_streamer():
                with open(mp4_path, "rb") as mp4_file:
                     yield from mp4_file
                if os.path.exists(mp4_path):
-                    os.remove(mp4_path)
+                    os.remove(mp4_path)"""
 
           print("stream successfully")
-          return StreamingResponse(mp4_streamer(), media_type="audio/mp4; codecs=aac") # stream audio response
+          return StreamingResponse(grid_out, media_type="audio/mp4; codecs=mp4a.40.2") # stream audio response
      except Exception as e:
           raise HTTPException(status_code=404, detail=f"File not found: {e}")
 

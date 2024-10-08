@@ -78,13 +78,12 @@ const AudioRecorder = () => {
       console.error("No media stream available.");
       return;
     }
-    mediaRecorderRef.current = new MediaRecorder(mediaStreamRef.current, { mimeType: 'audio/webm; codecs=opus' });
+    mediaRecorderRef.current = new MediaRecorder(mediaStreamRef.current, { mimeType: 'audio/mp4; codecs=mp4a.40.2', audioBitsPerSecond: 192000, });
 
     mediaRecorderRef.current.ondataavailable = handleData;
 
     mediaRecorderRef.current.onstop = () => {
       if (isRecordingRef.current) {
-        // Start a new MediaRecorder instance for the next chunk
         startMediaRecorder();
       } else {
         if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
@@ -147,6 +146,15 @@ const AudioRecorder = () => {
     setIsRecording(false)
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
+    }
+
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
     }
   }
 
