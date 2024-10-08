@@ -4,6 +4,8 @@ import RecordRTC from 'recordrtc';
 import LoginButton from './LoginButton';
 import LogoutButton from './LogoutButton';
 import axios from 'axios'
+import WaveSurfer from 'wavesurfer.js';
+import RegionsPlugin from 'wavesurfer.js/dist/plugin/wavesurfer.regions.min.js';
 import './AudioRecorder.css';
 
 const AudioRecorder = () => {
