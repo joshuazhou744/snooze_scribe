@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react';
+import RecordRTC from 'recordrtc';
 import LoginButton from './LoginButton';
 import LogoutButton from './LogoutButton';
 import axios from 'axios'
@@ -10,10 +11,8 @@ const AudioRecorder = () => {
   const [audioFiles, setAudioFiles] = useState([]);
   const [isRecording, setIsRecording] = useState(false)
   const isRecordingRef = useRef(isRecording);
-  const [energyThreshold, setEnergyThreshold] = useState(0.007)
-  const mediaRecorderRef = useRef(null)
-  const audioContextRef = useRef(null)
-  const analyserRef = useRef(null)
+  const [energyThreshold, setEnergyThreshold] = useState(0.002)
+  const recorderRef = useRef(null);
   const mediaStreamRef = useRef(null)
   const audioPlayerRef = useRef(null)
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -57,64 +56,35 @@ const AudioRecorder = () => {
       const stream = await navigator.mediaDevices.getUserMedia({audio: true}) // asks browser for mic permissions, audio: true specifies only audio is recorded
       mediaStreamRef.current = stream;
 
-      audioContextRef.current = new AudioContext() // creates an AudioContext() that represents the Web Audio API, allows audio manipulation
-      const source = audioContextRef.current.createMediaStreamSource(stream) // converts audio stream from mic to something the AudioContext() can process, source is the audio source node created from mic stream
-      const analyser = audioContextRef.current.createAnalyser() // creates Analyser node that can read and analyze audio in real time
-      analyser.fftSize = 4096; // fft = fast fourier transform, size 2048, breaks audio into frequency components
-     
-      source.connect(analyser) // connect audio stream to analyser
-      analyserRef.current = analyser;
+      if (!mediaStreamRef.current) {
+        console.error("No media stream available.");
+        return;
+      }
+      recorderRef.current = RecordRTC(mediaStreamRef.current, {
+        type:'audio',
+        mimeType: 'audio/mp4;codecs=mp4a.40.2',
+        timeSlice: 5000,
+        desiredSampRate: 44100, 
+        numberOfAudioChannels: 1,
+        bufferSize: 4096,
+        recorderType: RecordRTC.StereoAudioRecorder,
+        ondataavailable: handleData, // callback to handle each blob data
+      })
+      recorderRef.current.startRecording();
 
       setIsRecording(true)
-
-      startMediaRecorder()
     } catch (error) {
       console.error('Error accessing microphone', error)
     }
   }
   
-  const startMediaRecorder = () => {
-    if (!mediaStreamRef.current) {
-      console.error("No media stream available.");
-      return;
-    }
-    mediaRecorderRef.current = new MediaRecorder(mediaStreamRef.current, { mimeType: 'audio/mp4; codecs=mp4a.40.2', audioBitsPerSecond: 192000, });
-
-    mediaRecorderRef.current.ondataavailable = handleData;
-
-    mediaRecorderRef.current.onstop = () => {
-      if (isRecordingRef.current) {
-        startMediaRecorder();
-      } else {
-        if (audioContextRef.current && audioContextRef.current.state !== 'closed') {
-          audioContextRef.current.close();
-          audioContextRef.current = null;
-        }
-        if (mediaStreamRef.current) {
-          mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-          mediaStreamRef.current = null;
-        }
-      }
-    }
-    mediaRecorderRef.current.start(); // Start recording
-
-  // Schedule the recorder to stop after 5 seconds
-    setTimeout(() => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-    }, 5000);
-  }
-  
-  const handleData = (event) => {
-    if (event.data.size > 0) {
-      processAudioChunk(event.data);
-    }
+  const handleData = (blob) => {
+    processAudioChunk(blob);
   };
 
   const processAudioChunk = (audioBlob) => {
     setTimeout(async () => {
-      const rms = await calculateRMS(analyserRef.current);
+      const rms = await calculateRMS(audioBlob);
       console.log("RMS ENERGY: ", rms);
       if (rms > energyThreshold) {
         await uploadAudioChunk(audioBlob);
@@ -125,33 +95,41 @@ const AudioRecorder = () => {
     }, 0);
   };
 
-  const calculateRMS = (analyser) => {
-    return new Promise((resolve) => {
-      const bufferLength = analyser.fftSize;
-      const dataArray = new Uint8Array(bufferLength)
-
-      analyser.getByteTimeDomainData(dataArray);
-
-      let sum = 0
-      for (let i = 0; i < bufferLength; i++) {
-        const normalized = dataArray[i] / 128 - 1;
-        sum += normalized ** 2;
+  const calculateRMS = (blob) => {
+    return new Promise((resolve, reject) => {
+      const audioContext = new window.AudioContext();
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        audioContext.decodeAudioData(event.target.result)
+          .then((audioBuffer) => {
+            const channelData = audioBuffer.getChannelData(0);
+            let sum = 0;
+            for (let i = 0; i < channelData.length; i++) {
+              sum += channelData[i] * channelData[i];
+            }
+            const rms = Math.sqrt(sum / channelData.length);
+            audioContext.close();
+            resolve(rms);
+          })
+          .catch((error) => {
+            console.error('Error decoding audio data', error);
+            audioContext.close();
+            reject(error);
+          });
       }
-      const rms = Math.sqrt(sum / bufferLength);
-      resolve(rms);
+      reader.onerror = (error) => {
+        console.error("error reading blob", error)
+        reject(error)
+      }
+      reader.readAsArrayBuffer(blob)
     })
   }
 
   const stopRecording = () => {
-    setIsRecording(false)
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-    }
+    if (!isRecordingRef.current) return;
 
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-      audioContextRef.current = null;
-    }
+    recorderRef.current.stopRecording();
+    setIsRecording(false)
     if (mediaStreamRef.current) {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
