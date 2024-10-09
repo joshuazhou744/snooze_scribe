@@ -12,7 +12,7 @@ v0 (10/02/2024):
 - Snooze Scribe run on local development server with audio recording and handling on the python backend
 - Audio files are saved locally in an "audio" folder in the project directory
 - Legacy code still exists (commented out) in main.py of the api if you want to run this locally
-- Uses PyAudio SoundDevice and SoundFile to record and process audio data, possibly more reliable than RecordRTC
+- Uses PyAudio SoundDevice and SoundFile to record and procesgs audio data, possibly more reliable than RecordRTC
 
 v1 (10/07/2024): 
 - Deployed on Vercel
@@ -23,7 +23,6 @@ v1 (10/07/2024):
 v2 (10/07/2024): 
 - Overhauled MediaRecorder API to use RecordRTC as the web recorder; now records in .mp4 format
 - Able to record on mobile browsers; still cannot play recorded audio, fix soon
-- Implemented Auth0 Authentication for a user system
 
 v3 (10/08/2024): 
 - Implemented WaveSurfer.js and its Timeline plugin as audio player and waveform visualizer with user interface

@@ -41,6 +41,7 @@ const AudioRecorder = () => {
         const response = await axios.get(`${apiUrl}/audio-files`, {
             headers: {Authorization: `Bearer ${token}`}
         })
+        console.log("Response Data:", response.data);
         setAudioFiles(response.data)
     } catch (error) {
       console.error("Error fetching files", error)
