@@ -175,7 +175,6 @@ const AudioRecorder = () => {
           Authorization: `Bearer ${token}`
         }
       })
-      console.log(response.data)
       fetchAudioFiles();
     } catch (error) {
       console.log("Error deleting", error)
