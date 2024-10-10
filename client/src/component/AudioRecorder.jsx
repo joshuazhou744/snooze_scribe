@@ -230,7 +230,7 @@ const AudioRecorder = () => {
     </div>
 
   {!isAuthenticated && (
-    <div className="login-prompt">Please log in to record and view audio files</div>
+    <div className="login-prompt">Please login to use Snooze Scribe</div>
   )}
 
   {isAuthenticated && (
