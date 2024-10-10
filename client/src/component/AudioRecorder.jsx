@@ -309,8 +309,8 @@ const AudioRecorder = () => {
           <li>Again, ensure idle room noise is the only active noise</li>
           <li>Allow for the Energy Log to populate with entries</li>
           <li>Ensure the entries are accurate and unaffected by external noise, if not clear the log</li>
-          <li>Press the "Set Threshold Button" at 5 entries</li>
-          <li>Alternatively, set threshold yourself maunally based on observations of the energy log</li>
+          <li>Press the "Set Threshold" button at 5 entries or greater</li>
+          <li>Alternatively, set the threshold manually based on observations of the energy log</li>
         </ol>
       </div>
     </div>

@@ -323,41 +323,202 @@ background-color: #e53935;
 }
 
 
-  /* Responsive Styles */
+ /* Responsive Styles */
 @media (max-width: 600px) {
-    .threshold-control {
-      flex-direction: column;
-      align-items: center;
-    }
-  
-    .recording-controls {
-      flex-direction: column;
-      gap: 15px;
-    }
-  
-    .audio-file-item {
-      flex-direction: column;
-      align-items: flex-start;
-    }
-  
-    .file-actions {
-      margin-top: 10px;
-    }
-  }
-  
-  button {
-    transition: background-color 0.3s ease, transform 0.2s ease;
-  }
-  
-  button:hover {
-    transform: translateY(-2px);
+  /* General Container */
+  .container {
+    padding: 10px;
+    width: 100%;
   }
 
-  .error-message {
-    color: #f44336;
-    background-color: #fdecea;
-    padding: 10px 15px;
-    border: 1px solid #f5c6cb;
-    border-radius: 4px;
+  /* Header */
+  .header {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+
+  .manual-button,
+  .login-button,
+  .logout-button {
+    width: 100%;
+    max-width: 300px;
+    margin-bottom: 10px;
+  }
+
+  /* Auth Buttons */
+  .auth-buttons {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  /* Login Prompt */
+  .login-prompt {
+    font-size: 16px;
+    margin-top: 30px;
+    padding: 0 10px;
+  }
+
+  /* Recorder Section */
+  .recorder-section {
+    width: 100%;
+    padding: 15px;
+  }
+
+  .section-title {
+    font-size: 22px;
     margin-bottom: 15px;
   }
+
+  /* Threshold Control */
+  .threshold-control {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 20px;
+    width: 100%;
+  }
+
+  .threshold-control label {
+    font-size: 16px;
+    text-align: left;
+  }
+
+  .threshold-input {
+    width: 100%;
+    padding: 10px;
+    font-size: 16px;
+  }
+
+  /* Recording Controls */
+  .recording-controls {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    margin-bottom: 20px;
+  }
+
+  .start-button,
+  .stop-button {
+    width: 100%;
+    padding: 15px;
+    font-size: 16px;
+  }
+
+  /* Warning Message */
+  .warning {
+    font-size: 14px;
+    margin-bottom: 20px;
+  }
+
+  /* Audio Files Section */
+  .audio-files-section {
+    width: 100%;
+    padding: 0;
+  }
+
+  .section-subtitle {
+    font-size: 18px;
+    margin-bottom: 10px;
+  }
+
+  .audio-files-list {
+    padding: 0;
+    max-height: 50vh;
+  }
+
+  .audio-file-item {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 15px;
+  }
+
+  .file-name {
+    margin-bottom: 10px;
+    word-break: break-all;
+  }
+
+  .file-actions {
+    width: 100%;
+  }
+
+  /* Layer Section */
+  .layer {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 20px;
+    margin-top: 20px;
+  }
+
+  /* Energy Log and Calibration Instructions */
+  .energy-log,
+  .calibrate-manual {
+    width: 100%;
+    padding: 15px;
+  }
+
+  .energy-log .section-title,
+  .calibrate-manual .section-title {
+    font-size: 20px;
+    margin-bottom: 15px;
+  }
+
+  /* Energy Level List */
+  .energy-level-list {
+    margin-right: 0;
+    width: 100%;
+    padding: 0;
+  }
+
+  .energy-level-item {
+    font-size: 14px;
+    padding: 5px 0;
+  }
+
+  /* Log Buttons */
+  .log-buttons {
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    margin-top: 15px;
+  }
+
+  .clear-log,
+  .set-threshold {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+  }
+
+  /* Calibration Instructions */
+  .calibrate-instructions {
+    gap: 5px;
+    padding-left: 20px;
+    font-size: 14px;
+  }
+
+  .calibrate-instructions li {
+    margin-bottom: 10px;
+  }
+
+  /* Error Message */
+  .error-message {
+    font-size: 14px;
+    padding: 10px;
+  }
+
+  /* Adjust font sizes */
+  body {
+    font-size: 16px;
+  }
+
+  /* Adjust margins and paddings */
+  h2.section-title,
+  h3.section-subtitle {
+    margin-top: 0;
+  }
+}
