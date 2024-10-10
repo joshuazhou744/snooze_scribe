@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react';
+import { Link } from 'react-router-dom';
 import RecordRTC from 'recordrtc';
 import LoginButton from './LoginButton';
 import LogoutButton from './LogoutButton';
@@ -12,8 +13,9 @@ const AudioRecorder = () => {
   const [audioFiles, setAudioFiles] = useState([]);
   const [isRecording, setIsRecording] = useState(false)
   const isRecordingRef = useRef(isRecording);
-  const [energyThreshold, setEnergyThreshold] = useState(0.002)
+  const [energyThreshold, setEnergyThreshold] = useState(0.05)
   const [token, setToken] = useState(null);
+  const [energyLog, setEnergyLog] = useState([]);
   const recorderRef = useRef(null);
   const mediaStreamRef = useRef(null)
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -41,7 +43,6 @@ const AudioRecorder = () => {
         const response = await axios.get(`${apiUrl}/audio-files`, {
             headers: {Authorization: `Bearer ${token}`}
         })
-        console.log("Response Data:", response.data);
         setAudioFiles(response.data)
     } catch (error) {
       console.error("Error fetching files", error)
@@ -88,6 +89,7 @@ const AudioRecorder = () => {
   const processAudioChunk = (audioBlob) => {
     setTimeout(async () => {
       const rms = await calculateRMS(audioBlob);
+      setEnergyLog((prev) => [...prev, rms])
       try {
         console.log("RMS ENERGY: ", rms);
         if (rms > energyThreshold) {
@@ -182,11 +184,19 @@ const AudioRecorder = () => {
   }
 
   return (
-    <div className="container">
-  <div className="auth-buttons">
-    <LoginButton className="login-button" />
-    <LogoutButton className="logout-button" />
-  </div>
+  <div className="container">
+    <div className="header">
+        <Link to={"/user-guide"} >
+          <div className="about">
+            <button className='manual-button'>User Guide</button>
+          </div>
+        </Link>
+
+      <div className="auth-buttons">
+        <LoginButton className="login-button" />
+        <LogoutButton className="logout-button" />
+      </div>
+    </div>
 
   {!isAuthenticated && (
     <div className="login-prompt">Please log in to record and view audio files</div>
@@ -204,7 +214,7 @@ const AudioRecorder = () => {
           placeholder="Energy Threshold"
           value={energyThreshold}
           onChange={(e) => setEnergyThreshold(parseFloat(e.target.value))}
-          step="0.1"
+          step="0.01"
           min="0"
           max="10"
           className="threshold-input"
@@ -241,6 +251,19 @@ const AudioRecorder = () => {
           ))}
         </ul>
       </div>
+    </div>
+  )}
+
+  {isAuthenticated && (
+    <div className="energy-log">
+      <h2 className="section-title">Energy Log</h2>
+      <ul className='energy-level-list'>
+        {energyLog.map((energy, index) => (
+          <li key={index} className='energy-level-item'>
+            RMS Value: {energy}
+          </li>
+        ))}
+      </ul>
     </div>
   )}
 </div>
