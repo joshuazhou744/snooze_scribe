@@ -224,7 +224,7 @@ const AudioRecorder = () => {
         </Link>
 
       <div className="auth-buttons">
-        <LoginButton className="login-button" />
+        <LoginButton className="login-button" isAuthenticated={isAuthenticated}/>
         <LogoutButton className="logout-button" />
       </div>
     </div>

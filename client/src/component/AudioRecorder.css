@@ -2,6 +2,9 @@
 
 /* General Styles */
 body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
     background-color: #f0f2f5;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     color: #333;
@@ -53,12 +56,21 @@ transition: background-color 0.3s ease;
 }
 
 .login-button {
-background-color: #4caf50;
-color: white;
+  background-color: #4caf50;
+  color: white;
+}
+
+.login-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.login-button:disabled:hover {
+  background-color: #ccc;
 }
 
 .login-button:hover {
-background-color: #45a049;
+  background-color: #45a049;
 }
 
 .logout-button {
@@ -72,7 +84,6 @@ background-color: #e53935;
 
 /* Login Prompt */
 .login-prompt {
-text-align: center;
 font-size: 18px;
 margin-top: 50px;
 }
@@ -82,7 +93,7 @@ margin-top: 50px;
 .layer {
   display: flex;
   justify-content: space-between;
-  margin-top: 20px;
+  margin-top: 10px;
   width: 70vw;
   gap: 10px;
 }
@@ -160,11 +171,11 @@ margin-top: 50px;
 
 /* Recorder Section */
 .recorder-section {
-background-color: #ffffff;
-padding-top: 30px;
-border-radius: 8px;
-box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-width: 70vw;
+  background-color: #ffffff;
+  padding-top: 30px;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 70vw;
 }
 
 .section-title {
@@ -344,6 +355,11 @@ background-color: #e53935;
     width: 100%;
     max-width: 300px;
     margin-bottom: 10px;
+  }
+
+  .login-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
   }
 
   /* Auth Buttons */

@@ -1,7 +1,7 @@
 import React from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 
-export default function LoginButton({className}) {
+export default function LoginButton({className, isAuthenticated}) {
 
     const { loginWithRedirect } = useAuth0();
     const handleLogin = () => {
@@ -10,5 +10,5 @@ export default function LoginButton({className}) {
       });
     };
 
-  return <button onClick={handleLogin} className={`auth-button ${className}`}>Log In</button>
+  return <button disabled={isAuthenticated} onClick={handleLogin} className={`auth-button ${className}`}>Log In</button>
 }
