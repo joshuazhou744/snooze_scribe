@@ -28,6 +28,7 @@ v3 (10/08/2024):
 - Implemented WaveSurfer.js and its Timeline plugin as audio player and waveform visualizer with user interface
 - Mobile browsers can record but cannot see the visualizer nor play the recorded audio, you will have to access your recordings on a computer browser
 
-v4 (In Progress):
-- Creating RMS Energy Level log to help user calibrate the energy threshold accordingly to room noise
-- Creating short user manual
+v4 (10/10/2024):
+- Created RMS Energy Level log to help user calibrate the energy threshold accordingly to room noise, included calibration instructions
+- Added the WakeLock API to ensure the recorder stays active throughout the night 
+- IOS automatically shuts down all background processes after a grace period during sleep; this function keeps the recording active at night; the phone will have to be charging during the recording process

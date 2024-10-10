@@ -12,6 +12,7 @@ export default function Manual() {
         </div>
 
         <div className="user-guide">
+            <h2>User Guide</h2>
             Guess how to use it
         </div>
     </div>

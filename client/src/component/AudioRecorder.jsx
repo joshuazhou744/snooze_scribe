@@ -16,6 +16,7 @@ const AudioRecorder = () => {
   const [energyThreshold, setEnergyThreshold] = useState(0.05)
   const [token, setToken] = useState(null);
   const [energyLog, setEnergyLog] = useState([]);
+  const [wakeLock, setWakeLock] = useState(null); // keeps screen on during the night for IOS Mobile Users because Webkit API is terrible and halts all background processes past a grace period on sleep
   const recorderRef = useRef(null);
   const mediaStreamRef = useRef(null)
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -30,6 +31,24 @@ const AudioRecorder = () => {
   useEffect(() => {
     isRecordingRef.current = isRecording;
   }, [isRecording])
+
+  const requestWakeLock = async () => {
+    try {
+      const lock = await navigator.wakeLock.request('screen');
+      setWakeLock(lock)
+      console.log('wakelock is now active')
+    } catch (err) {
+      console.error(`${err.name}, ${err.message}`)
+    }
+  }
+
+  const releaseWakeLock = async () => {
+    if (wakeLock !== null) {
+      await wakeLock.release();
+      setWakeLock(null)
+      console.log("wakelock released")
+    }
+  }
 
   const fetchAudioFiles = async () => {
     if (!isAuthenticated || !user) {
@@ -80,6 +99,7 @@ const AudioRecorder = () => {
     } catch (error) {
       console.error('Error accessing microphone', error)
     }
+    await requestWakeLock();
   }
   
   const handleData = (blob) => {
@@ -143,6 +163,7 @@ const AudioRecorder = () => {
       mediaStreamRef.current.getTracks().forEach((track) => track.stop());
       mediaStreamRef.current = null;
     }
+    releaseWakeLock();
   }
 
   const uploadAudioChunk = async (audioData) => {
@@ -181,6 +202,16 @@ const AudioRecorder = () => {
     } catch (error) {
       console.log("Error deleting", error)
     }
+  }
+
+  const clearLog = () => {
+    setEnergyLog([])
+  }
+
+  const updateEnergyThreshold = () => {
+    const sum = energyLog.reduce((a, b) => a + b);
+    const avg = (sum / energyLog.length).toFixed(5)
+    setEnergyThreshold(avg)
   }
 
   return (
@@ -255,15 +286,33 @@ const AudioRecorder = () => {
   )}
 
   {isAuthenticated && (
-    <div className="energy-log">
-      <h2 className="section-title">Energy Log</h2>
-      <ul className='energy-level-list'>
-        {energyLog.map((energy, index) => (
-          <li key={index} className='energy-level-item'>
-            RMS Value: {energy}
-          </li>
-        ))}
-      </ul>
+    <div className="layer">
+      <div className="energy-log">
+        <h2 className="section-title">Energy Log</h2>
+        <ul className='energy-level-list'>
+          {energyLog.map((energy, index) => (
+            <li key={index} className='energy-level-item'>
+              Energy Level: {energy}
+            </li>
+          ))}
+        </ul>
+        <div className="log-buttons">
+          <button className="clear-log" onClick={clearLog}>Clear Log</button>
+          <button className="set-threshold" onClick={updateEnergyThreshold} disabled={energyLog.length <= 5}>Set Threshold</button>
+        </div>
+      </div>
+      <div className="calibrate-manual">
+        <h2 className="section-title">Calibration Instructions</h2>
+        <ol className="calibrate-instructions">
+          <li>Ensure an environment with minimal noise</li>
+          <li>Press the "Start Recording" Button</li>
+          <li>Again, ensure idle room noise is the only active noise</li>
+          <li>Allow for the Energy Log to populate with entries</li>
+          <li>Ensure the entries are accurate and unaffected by external noise, if not clear the log</li>
+          <li>Press the "Set Threshold Button" at 5 entries</li>
+          <li>Alternatively, set threshold yourself maunally based on observations of the energy log</li>
+        </ol>
+      </div>
     </div>
   )}
 </div>
