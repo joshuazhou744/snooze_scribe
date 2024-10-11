@@ -13,7 +13,8 @@ const AudioRecorder = () => {
   const [audioFiles, setAudioFiles] = useState([]);
   const [isRecording, setIsRecording] = useState(false)
   const isRecordingRef = useRef(isRecording);
-  const [energyThreshold, setEnergyThreshold] = useState(0.05)
+  const [energyThreshold, setEnergyThreshold] = useState(0.05);
+  const [expiryThreshold, setExpiryTHreshold] = useState(3);
   const [token, setToken] = useState(null);
   const [energyLog, setEnergyLog] = useState([]);
   const [wakeLock, setWakeLock] = useState(null); // keeps screen on during the night for IOS Mobile Users because Webkit API is terrible and halts all background processes past a grace period on sleep
@@ -29,6 +30,10 @@ const AudioRecorder = () => {
   }, [isAuthenticated])
 
   useEffect(() => {
+    autoDelete()
+  }, [isRecording])
+
+  useEffect(() => {
     isRecordingRef.current = isRecording;
   }, [isRecording])
 
@@ -39,6 +44,31 @@ const AudioRecorder = () => {
       console.log('wakelock is now active')
     } catch (err) {
       console.error(`${err.name}, ${err.message}`)
+    }
+  }
+
+  const getFileName = () => {
+    const now = new Date()
+    const formattedDate = `${now.getMonth() + 1}-${now.getDate()}-${now.getFullYear()}_${now.getHours()}h-${now.getMinutes()}m-${now.getSeconds()}s`
+    return `sleep_recording_${formattedDate}.mp4`
+  }
+
+  const autoDelete = () => {
+    const now = new Date()
+    const currentYear = now.getFullYear()
+    const currentMonth = now.getMonth() + 1
+    const currentDay = now.getDate()
+    for (let i = 0; i < audioFiles.length; i++) {
+      const filename = audioFiles[i].filename
+      const month = parseInt(filename.slice(16, 18))
+      const day = parseInt(filename.slice(19, 21))
+      const year = parseInt(filename.slice(22, 26))
+      if (year === currentYear && month === currentMonth) {
+        if (currentDay - day <= 0) {
+          handleDelete(audioFiles[i].file_id)
+          console.log(`File ${filename} auto deleted`)
+        }
+      }
     }
   }
 
@@ -81,12 +111,6 @@ const AudioRecorder = () => {
     } catch (error) {
       console.error("Error fetching files", error)
     }
-  }
-
-  const getFileName = () => {
-    const now = new Date()
-    const formattedDate = `${now.getMonth() + 1}-${now.getDate()}-${now.getFullYear()}_${now.getHours()}h-${now.getMinutes()}m-${now.getSeconds()}s`
-    return `sleep_recording_${formattedDate}.mp4`
   }
 
   const startRecording = async () => {
@@ -213,6 +237,7 @@ const AudioRecorder = () => {
           Authorization: `Bearer ${token}`
         }
       })
+      console.log('Deleted Audio File')
       fetchAudioFiles();
     } catch (error) {
       console.log("Error deleting", error)
