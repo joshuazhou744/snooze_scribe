@@ -64,7 +64,7 @@ const AudioRecorder = () => {
       const day = parseInt(filename.slice(19, 21))
       const year = parseInt(filename.slice(22, 26))
       if (year === currentYear && month === currentMonth) {
-        if (currentDay - day <= 0) {
+        if (currentDay - day <= expiryThreshold) {
           handleDelete(audioFiles[i].file_id)
           console.log(`File ${filename} auto deleted`)
         }
