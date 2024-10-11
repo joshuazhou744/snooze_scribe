@@ -26,7 +26,7 @@ export default function Manual() {
             <ul className='additional-list'>
               <li>Audio playback will NOT work on IOS mobile browsers due to Webkit API restrictions</li>
               <li>Please use any other device to view and play your audio files, I am working to fix this issue</li>
-              <li>Source code: https://github.com/joshuazhou744/snooze_scribe</li>
+              <li>Source code: <a href="https://github.com/joshuazhou744/snooze_scribe" target='_blank'>https://github.com/joshuazhou744/snooze_scribe</a></li>
               <li>Developer Contact: joshuazhou744@gmail.com</li>
             </ul>
         </div>
