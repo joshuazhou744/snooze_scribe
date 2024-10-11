@@ -42,6 +42,21 @@ const AudioRecorder = () => {
     }
   }
 
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        await getAccessTokenSilently({
+          audience: audience,
+          ignoreCache: true,
+        });
+      } catch (error) {
+        console.error('Error refreshing token', error);
+      }
+    }, 10 * 60 * 1000); // Refresh every 10 minutes
+
+    return () => clearInterval(interval);
+  }, [getAccessTokenSilently]);
+
   const releaseWakeLock = async () => {
     if (wakeLock !== null) {
       await wakeLock.release();

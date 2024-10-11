@@ -25,6 +25,8 @@ export default function Auth0ProviderWithHistory({children}) {
                     redirect_uri: `${window.location.origin}/callback`,
                 }}
                 onRedirectCallback={onRedirectCallback}
+                useRefreshTokens="true"
+                cacheLocation="localstorage"
                 >
                 {children}
             </Auth0Provider>
