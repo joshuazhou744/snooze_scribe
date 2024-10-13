@@ -264,7 +264,7 @@ const AudioRecorder = () => {
     <div className="header">
         <Link to={"/user-guide"} >
           <div className="about">
-            <button className='manual-button'>User Guide</button>
+            <button className='manual-button' onClick={stopRecording}>User Guide</button>
           </div>
         </Link>
 
@@ -296,6 +296,7 @@ const AudioRecorder = () => {
           className="threshold-input"
         />
       </div>
+    
 
       <div className="recording-controls">
         <button onClick={startRecording} disabled={isRecording} className="start-button">
