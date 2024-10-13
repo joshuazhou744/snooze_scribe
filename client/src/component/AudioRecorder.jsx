@@ -148,7 +148,12 @@ const AudioRecorder = () => {
   const processAudioChunk = (audioBlob) => {
     setTimeout(async () => {
       const rms = await calculateRMS(audioBlob);
-      setEnergyLog((prev) => [...prev, rms])
+      setEnergyLog((prev) => {
+        if (prev.length <= 50) {
+          return [...prev, rms]
+        }
+        return prev
+      })
       try {
         console.log("RMS ENERGY: ", rms);
         if (rms > energyThreshold) {
@@ -282,8 +287,8 @@ const AudioRecorder = () => {
         <input
           type="number"
           id="energyThreshold"
-          placeholder="Energy Threshold"
           value={energyThreshold}
+          placeholder="Energy Threshold"
           onChange={(e) => setEnergyThreshold(parseFloat(e.target.value))}
           step="0.01"
           min="0"
