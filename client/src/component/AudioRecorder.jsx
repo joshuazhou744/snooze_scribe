@@ -14,7 +14,8 @@ const AudioRecorder = () => {
   const [isRecording, setIsRecording] = useState(false)
   const isRecordingRef = useRef(isRecording);
   const [energyThreshold, setEnergyThreshold] = useState(0.05);
-  const [expiryThreshold, setExpiryTHreshold] = useState(3);
+  const [expiryThreshold, setExpiryThreshold] = useState(2);
+  const [maxAudioFiles, setMaxAudioFiles] = useState(50)
   const [token, setToken] = useState(null);
   const [energyLog, setEnergyLog] = useState([]);
   const [wakeLock, setWakeLock] = useState(null); // keeps screen on during the night for IOS Mobile Users because Webkit API is terrible and halts all background processes past a grace period on sleep
@@ -36,6 +37,10 @@ const AudioRecorder = () => {
   useEffect(() => {
     isRecordingRef.current = isRecording;
   }, [isRecording])
+
+  useEffect(() => {
+    stopRecording()
+  }, [])
 
   const requestWakeLock = async () => {
     try {
@@ -159,8 +164,15 @@ const AudioRecorder = () => {
       try {
         console.log("RMS ENERGY: ", rms);
         if (rms > energyThreshold) {
-          await uploadAudioChunk(audioBlob);
-          console.log('Audio Uploaded');
+          setAudioFiles((prev) => {
+            if (prev.length < maxAudioFiles) {
+              uploadAudioChunk(audioBlob);
+              console.log("Uploading")
+            } else {
+              console.log("Maximum files reached")
+            }
+            return prev
+          })
         } else {
           console.log('Audio Discarded due to low energy');
         }
