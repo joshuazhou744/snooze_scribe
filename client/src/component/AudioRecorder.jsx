@@ -68,6 +68,8 @@ const AudioRecorder = () => {
           handleDelete(audioFiles[i].file_id)
           console.log(`File ${filename} auto deleted`)
         }
+      } else {
+        handleDelete(audioFiles[i].file_id)
       }
     }
   }
@@ -125,7 +127,7 @@ const AudioRecorder = () => {
       recorderRef.current = RecordRTC(mediaStreamRef.current, {
         type:'audio',
         mimeType: 'audio/mp4;codecs=mp4a.40.2',
-        timeSlice: 5000,
+        timeSlice: 15000,
         desiredSampRate: 44100, 
         numberOfAudioChannels: 1,
         bufferSize: 4096,
