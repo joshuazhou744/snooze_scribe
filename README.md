@@ -37,8 +37,11 @@ v2.11 (10/10/2024):
 - Finished user guide and additional informations sections
 - Added responsive CSS styles for mobile devices
 
+v2.2 (10/14/2024):
+- Added auto delete function for audio files past 2 days
+- Increased clipping interval and implemented a maximum audio file list to prevent database overflow
+
 v3 (In Progress):
 - Building a "tips" section that allows users to try methods to reduce snoring and informs users on things that expedite snoring
 - Start working on a "Snooze Score" value that reflects the user's quality of sleep based on the amount snoring detected using frequency detection from Web Audio API
     - This value will also be affected by the snoring trigger factors (alcohol, smoking, etc.) and the methods that reduce snoring (nasal strips, mouth tape)
-- Implementing an auto delete function for audio files past 3 days
