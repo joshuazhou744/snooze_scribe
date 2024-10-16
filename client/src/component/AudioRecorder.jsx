@@ -15,7 +15,7 @@ const AudioRecorder = () => {
   const isRecordingRef = useRef(isRecording);
   const [energyThreshold, setEnergyThreshold] = useState(0.05);
   const [expiryThreshold, setExpiryThreshold] = useState(1);
-  const [maxAudioFiles, setMaxAudioFiles] = useState(50)
+  const [maxAudioFiles, setMaxAudioFiles] = useState(500)
   const [token, setToken] = useState(null);
   const [energyLog, setEnergyLog] = useState([]);
   const [wakeLock, setWakeLock] = useState(null); // keeps screen on during the night for IOS Mobile Users because Webkit API is terrible and halts all background processes past a grace period on sleep

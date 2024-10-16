@@ -201,8 +201,9 @@ async def upload_audio(file: UploadFile = File(...), authorization: str = Header
      
 @app.get("/download-file")
 async def download_file(file_id: str):
-     grid_out = await fs.open_download_stream(ObjectId(file_id))
-     with open(f"{file_id}_output.mp3", "wb") as f:
+     dl_fs = motor.motor_asyncio.AsyncIOMotorGridFSBucket(db, bucket_name="125ff93b9c0a627f88c0bf6c71ba9188e377c20213b1e92f299c7065f995311f")
+     grid_out = await dl_fs.open_download_stream(ObjectId(file_id))
+     with open(f"{file_id}_output.mp4", "wb") as f:
           f.write(await grid_out.read())
 
 @app.get("/audio-files")
