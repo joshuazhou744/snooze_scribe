@@ -14,7 +14,7 @@ const AudioRecorder = () => {
   const [isRecording, setIsRecording] = useState(false)
   const isRecordingRef = useRef(isRecording);
   const [energyThreshold, setEnergyThreshold] = useState(0.05);
-  const [expiryThreshold, setExpiryThreshold] = useState(1);
+  const [expiryThreshold, setExpiryThreshold] = useState(2);
   const [maxAudioFiles, setMaxAudioFiles] = useState(500)
   const [token, setToken] = useState(null);
   const [energyLog, setEnergyLog] = useState([]);
