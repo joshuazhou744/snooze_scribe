@@ -1,0 +1,10 @@
+pandas
+numpy
+torch
+torchaudio
+librosa
+scikit-learn
+uvicorn
+fastapi
+motor
+tqdm
