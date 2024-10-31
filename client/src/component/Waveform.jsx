@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
 import { useWavesurfer } from '@wavesurfer/react'
 import Timeline from 'wavesurfer.js/dist/plugins/timeline.esm.js'
 import axios from 'axios';

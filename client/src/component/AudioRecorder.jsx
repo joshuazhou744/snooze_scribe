@@ -321,8 +321,6 @@ const AudioRecorder = () => {
         </button>
       </div>
 
-      {isRecording && <div className="warning">Recording... Cannot play while recording active</div>}
-
       <div className="audio-files-section">
         <h3 className="section-subtitle">Audio Files</h3>
         <ul className="audio-files-list">
