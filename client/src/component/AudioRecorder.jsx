@@ -31,8 +31,10 @@ const AudioRecorder = () => {
   }, [isAuthenticated])
 
   useEffect(() => {
-    autoDelete()
-  }, [isRecording])
+    autoDelete();
+    const interval = setInterval(autoDelete, 120 * 60 * 1000); // Every 60 minutes
+    return () => clearInterval(interval);
+  }, [audioFiles]);
 
   useEffect(() => {
     isRecordingRef.current = isRecording;
@@ -59,25 +61,33 @@ const AudioRecorder = () => {
   }
 
   const autoDelete = () => {
-    const now = new Date()
-    const currentYear = now.getFullYear()
-    const currentMonth = now.getMonth() + 1
-    const currentDay = now.getDate()
-    for (let i = 0; i < audioFiles.length; i++) {
-      const filename = audioFiles[i].filename
-      const month = parseInt(filename.slice(16, 18))
-      const day = parseInt(filename.slice(19, 21))
-      const year = parseInt(filename.slice(22, 26))
-      if (year === currentYear && month === currentMonth) {
-        if (currentDay - day >= expiryThreshold) {
-          handleDelete(audioFiles[i].file_id)
-          console.log(`File ${filename} auto deleted`)
+    const now = new Date();
+    
+    audioFiles.forEach(file => {
+      const filename = file.filename; // Expected format: 'sleep_recording_MM-DD-YYYY_hh-mm-ss.mp4'
+      
+      const regex = /sleep_recording_(\d{1,2})-(\d{1,2})-(\d{4})_/;
+      const match = filename.match(regex);
+      
+      if (match) {
+        const month = parseInt(match[1], 10);
+        const day = parseInt(match[2], 10);
+        const year = parseInt(match[3], 10);
+        
+        const fileDate = new Date(year, month - 1, day);
+        const diffTime = now - fileDate;
+        const diffDays = diffTime / (1000 * 60 * 60 * 24);
+        
+        if (diffDays >= expiryThreshold) {
+          handleDelete(file.file_id);
+          console.log(`File ${filename} auto deleted (Age: ${diffDays.toFixed(2)} days)`);
         }
       } else {
-        handleDelete(audioFiles[i].file_id)
+        console.warn(`Filename "${filename}" does not match the expected format.`);
       }
-    }
-  }
+    });
+  };
+  
 
   const releaseWakeLock = async () => {
     if (wakeLock !== null) {
