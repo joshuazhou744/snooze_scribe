@@ -23,9 +23,10 @@ export default function Auth0ProviderWithHistory({children}) {
                 authorizationParams={{
                     audience: audience,
                     redirect_uri: `${window.location.origin}/callback`,
+                    scope: "openid profile email offline_access"
                 }}
                 onRedirectCallback={onRedirectCallback}
-                useRefreshTokens="true"
+                useRefreshTokens={true}
                 cacheLocation="localstorage"
                 >
                 {children}
