@@ -117,7 +117,6 @@ def load_classification_model():
         
         # Look in two possible locations for the model file
         possible_paths = [
-            os.path.join(os.path.dirname(__file__), '../snooze_model/audio_classifier.pth'),
             os.path.join(os.path.dirname(__file__), 'audio_classifier.pth')
         ]
         
