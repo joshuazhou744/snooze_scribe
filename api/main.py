@@ -14,7 +14,7 @@ import os
 import io
 
 from jose import jwt, JWTError
-from typing import List
+from typing import List, Optional, Union
 import requests
 import hashlib
 
@@ -22,6 +22,197 @@ import tempfile
 import subprocess
 import shutil
 
+# Add imports for classification model
+import torch
+import librosa
+
+# Define the classification response model
+class ClassificationResponse(BaseModel):
+    file_id: str
+    classification: str
+    confidence: float
+
+# Define audio file model
+class AudioFile(BaseModel):
+    file_id: str
+    filename: str
+    audio_url: str
+    classification: str = "unclassified"
+    confidence: float = 0.0
+    
+    class Config:
+        schema_extra = {
+            "example": {
+                "file_id": "60d21b4967d0d631236d5f66",
+                "filename": "sleep_recording_10-15-2024_02h-34m-56s.mp4",
+                "audio_url": "audio-file/play/60d21b4967d0d631236d5f66",
+                "classification": "snore",
+                "confidence": 0.92
+            }
+        }
+
+# Define the efficient CNN model architecture (match the one in snooze_model/main.py)
+class EfficientAudioClassifier(torch.nn.Module):
+    """Lightweight CNN model for audio classification with fewer parameters"""
+    def __init__(self, num_classes, n_mels, fixed_length, sample_rate):
+        super(EfficientAudioClassifier, self).__init__()
+        
+        # Calculate input dimensions based on hop_length
+        hop_length = 1024
+        self.time_dim = int(fixed_length / hop_length) + 1
+        
+        # Efficient convolutional architecture with depth-wise separable convolutions
+        # First: standard convolution for initial feature extraction
+        self.conv1 = torch.nn.Conv2d(1, 16, kernel_size=3, padding=1)
+        self.bn1 = torch.nn.BatchNorm2d(16)
+        self.pool = torch.nn.MaxPool2d(2, 2)
+        
+        # Depthwise separable convolution for efficiency
+        # Depthwise
+        self.conv_dw = torch.nn.Conv2d(16, 16, kernel_size=3, padding=1, groups=16)
+        self.bn_dw = torch.nn.BatchNorm2d(16)
+        # Pointwise
+        self.conv_pw = torch.nn.Conv2d(16, 32, kernel_size=1)
+        self.bn_pw = torch.nn.BatchNorm2d(32)
+        
+        # Calculate the flattened size based on input dimensions and network structure
+        # After 2 max pooling layers (dividing dimensions by 4)
+        n_mels_reduced = n_mels // 4
+        time_dim_reduced = self.time_dim // 4
+        self.flattened_size = 32 * n_mels_reduced * time_dim_reduced
+        
+        # Smaller fully connected layers
+        self.fc1 = torch.nn.Linear(self.flattened_size, 64)
+        self.dropout = torch.nn.Dropout(0.5)
+        self.fc2 = torch.nn.Linear(64, num_classes)
+    
+    def forward(self, x):
+        """Forward pass through the network"""
+        # Add channel dimension
+        x = x.unsqueeze(1)
+        
+        # First conv block
+        x = self.pool(torch.nn.functional.relu(self.bn1(self.conv1(x))))
+        
+        # Efficient depthwise separable convolution block
+        x = torch.nn.functional.relu(self.bn_dw(self.conv_dw(x)))
+        x = self.pool(torch.nn.functional.relu(self.bn_pw(self.conv_pw(x))))
+        
+        # Flatten and fully connected layers
+        x = x.view(x.size(0), -1)
+        x = self.dropout(torch.nn.functional.relu(self.fc1(x)))
+        x = self.fc2(x)
+        
+        return x
+
+# Global variables for model and device
+classification_model = None
+device = None
+
+# Load the trained model
+def load_classification_model():
+    try:
+        device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print(f"Using device: {device}")
+        
+        # Look in two possible locations for the model file
+        possible_paths = [
+            os.path.join(os.path.dirname(__file__), '../snooze_model/audio_classifier.pth'),
+            os.path.join(os.path.dirname(__file__), 'audio_classifier.pth')
+        ]
+        
+        model_path = None
+        for path in possible_paths:
+            if os.path.exists(path):
+                model_path = path
+                break
+        
+        if model_path is None:
+            print(f"ERROR: Model file not found in any of: {possible_paths}")
+            return None, device
+            
+        print(f"Found model at: {model_path}")
+            
+        # Create model with correct parameters for the efficient architecture
+        model = EfficientAudioClassifier(
+            num_classes=2, 
+            n_mels=64,  # The efficient model uses 64 mel bands instead of 128
+            fixed_length=44100*15, 
+            sample_rate=44100
+        )
+        
+        print(f"Created model instance: {type(model)}")
+        
+        try:
+            checkpoint = torch.load(model_path, map_location=device)
+            print(f"Model checkpoint loaded, keys: {checkpoint.keys()}")
+            
+            if 'model_state_dict' not in checkpoint:
+                print(f"ERROR: Invalid checkpoint format, 'model_state_dict' not found. Available keys: {checkpoint.keys()}")
+                return None, device
+                
+            model.load_state_dict(checkpoint['model_state_dict'])
+            model.to(device)
+            model.eval()  # Set to evaluation mode
+            print(f"Successfully loaded classification model from {model_path}")
+            return model, device
+        except Exception as e:
+            print(f"ERROR loading model state: {e}")
+            import traceback
+            print(traceback.format_exc())
+            return None, device
+    except Exception as e:
+        print(f"ERROR in load_classification_model: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return None, device
+
+# Extract features from audio for classification (updated for efficient model)
+def extract_features(audio_data, sample_rate=44100, n_mels=64, fixed_length=44100*15):
+    try:
+        print(f"Starting feature extraction, audio data size: {len(audio_data)} bytes")
+        
+        # Convert audio data to numpy array
+        print("Loading audio data with librosa")
+        y, sr = librosa.load(io.BytesIO(audio_data), sr=sample_rate, mono=True)
+        print(f"Audio loaded, length: {len(y)}, sample rate: {sr}")
+        
+        # Ensure fixed length
+        if len(y) < fixed_length:
+            print(f"Audio length ({len(y)}) less than required ({fixed_length}), padding...")
+            padding = fixed_length - len(y)
+            y = np.pad(y, (0, padding), 'constant')
+        else:
+            print(f"Audio length ({len(y)}) longer than required ({fixed_length}), truncating...")
+            y = y[:fixed_length]
+            
+        # Extract mel spectrogram features - IMPORTANT: use hop_length=1024 to match model
+        print("Calculating mel spectrogram...")
+        mel_spec = librosa.feature.melspectrogram(
+            y=y, 
+            sr=sr, 
+            n_mels=n_mels,
+            hop_length=1024  # Must match the model training parameters
+        )
+        print(f"Mel spectrogram shape: {mel_spec.shape}")
+        
+        log_mel_spec = librosa.power_to_db(mel_spec, ref=np.max)
+        print(f"Log mel spectrogram shape: {log_mel_spec.shape}, min: {np.min(log_mel_spec)}, max: {np.max(log_mel_spec)}")
+        
+        # Normalize features
+        mean, std = -30.0, 12.0  # Example values, replace with your actual training values
+        print(f"Normalizing with mean={mean}, std={std}")
+        normalized_features = (log_mel_spec - mean) / std
+        
+        tensor = torch.tensor(normalized_features, dtype=torch.float32)
+        print(f"Final tensor shape: {tensor.shape}, min: {torch.min(tensor)}, max: {torch.max(tensor)}")
+        
+        return tensor
+    except Exception as e:
+        print(f"ERROR in extract_features: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return None
 
 load_dotenv()
 
@@ -29,7 +220,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://snooze-scribe.vercel.app", "http://localhost:5173"],
+    allow_origins=["https://snooze-scribe.vercel.app", "http://localhost:5173", "http://127.0.0.1:5173", "https://snooze-scribe-api-production-7c27c458ab69.herokuapp.com"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -127,12 +318,12 @@ def verify_jwt_token(token: str): # verify the user by getting it's 'sub' or id
                algorithms=["RS256"],
                audience=AUTH0_AUDIENCE,
                issuer=f"https://{AUTH0_DOMAIN}/"
-
           )
           return payload['sub'] # reload user id
      except JWTError as e:
-          print("TOKEN BAD")
           raise HTTPException(status_code=403, detail=f"Token invalid or expired {e}")
+     except Exception as e:
+          raise HTTPException(status_code=403, detail=f"Token verification error: {e}")
      
 def get_user_gridfs(user_id: str):
      hashed_user_id = hashlib.sha256(user_id.encode('utf-8')).hexdigest()
@@ -182,6 +373,16 @@ async def stop_recording():
     recording_active = False
     return {"message": "Recording stopped"}"""
 
+@app.on_event("startup")
+async def startup_event():
+    global classification_model, device
+    print("Starting application, loading classification model...")
+    classification_model, device = load_classification_model()
+    if classification_model is None:
+        print("WARNING: Classification model failed to load. Classification endpoints will return 500 errors.")
+    else:
+        print("Classification model loaded successfully and ready for inference.")
+
 
 @app.post("/upload-audio")
 async def upload_audio(file: UploadFile = File(...), authorization: str = Header(None)): # UploadFile is a class used to handle file uploads, File(...) the input will be a file and the file input is required as denoted by ...
@@ -206,7 +407,7 @@ async def download_file(file_id: str):
      with open(f"{file_id}_output.mp4", "wb") as f:
           f.write(await grid_out.read())
 
-@app.get("/audio-files")
+@app.get("/audio-files", response_model=List[AudioFile])
 async def get_audio_files(authorization: str = Header(None)):
     token = get_auth_token(authorization)
     user_id = verify_jwt_token(token)
@@ -217,11 +418,13 @@ async def get_audio_files(authorization: str = Header(None)):
     files = await cursor.to_list(None) # converts cursor to a python list, None parameter means there is no limit to the list; retrieves all files
     file_list = []
     for file in files:
-         file_data = {
-            "file_id": str(file['_id']), # _id is mongodb's ObjectId
-            "filename": file['filename'], # get the filename stored in mongodb
-            "audio_url": f"audio-file/play/{file['_id']}",
-         }
+         file_data = AudioFile(
+            file_id=str(file['_id']),
+            filename=file['filename'],
+            audio_url=f"audio-file/play/{file['_id']}",
+            classification=file.get('classification', "unclassified"),
+            confidence=file.get('confidence', 0.0)
+         )
          file_list.append(file_data)
     return file_list
 
@@ -265,3 +468,77 @@ async def shutdown_event():
     global recording_active
     recording_active = False
     print("SHUTTING DOWN")
+
+@app.post("/classify-audio/{file_id}", response_model=ClassificationResponse)
+async def classify_audio(file_id: str, authorization: str = Header(None)):
+    try:
+        print(f"Starting classification for file_id: {file_id}")
+        
+        if classification_model is None:
+            print("ERROR: Classification model not loaded")
+            raise HTTPException(status_code=500, detail="Classification model not loaded")
+            
+        token = get_auth_token(authorization)
+        user_id = verify_jwt_token(token)
+        print(f"Authenticated user_id: {user_id}")
+        
+        # Get user's GridFS bucket
+        gridfs_files = get_user_gridfs(user_id)
+        
+        try:
+            # Retrieve the audio file
+            print("Attempting to retrieve audio file from GridFS")
+            grid_out = await gridfs_files.open_download_stream(ObjectId(file_id))
+            audio_data = await grid_out.read()
+            print(f"Successfully retrieved audio file, size: {len(audio_data)} bytes")
+            
+            # Extract features
+            print("Extracting audio features")
+            features = extract_features(audio_data)
+            if features is None:
+                print("ERROR: Failed to extract features from audio file")
+                raise HTTPException(status_code=500, detail="Could not extract features from audio file")
+            print(f"Features extracted, shape: {features.shape}")
+            
+            # Make prediction
+            print("Running model prediction")
+            with torch.no_grad():
+                features = features.to(device)
+                outputs = classification_model(features.unsqueeze(0))  # Add batch dimension
+                probabilities = torch.nn.functional.softmax(outputs, dim=1)
+                confidence, predicted = torch.max(probabilities, 1)
+                print(f"Raw prediction: {predicted.item()}, confidence: {confidence.item()}")
+                
+            # Map prediction to class name
+            class_names = ["other", "snore"]
+            classification = class_names[predicted.item()]
+            print(f"Classification result: {classification}")
+            
+            # Update the file metadata in MongoDB with classification result
+            print("Updating MongoDB document with classification result")
+            db_collection = client["audio"][f"{hashlib.sha256(user_id.encode('utf-8')).hexdigest()}.files"]
+            await db_collection.update_one(
+                {"_id": ObjectId(file_id)},
+                {"$set": {"classification": classification, "confidence": float(confidence.item())}}
+            )
+            print("MongoDB document updated successfully")
+            
+            return {
+                "file_id": file_id,
+                "classification": classification,
+                "confidence": float(confidence.item())
+            }
+            
+        except NoFile as e:
+            print(f"File not found error: {str(e)}")
+            raise HTTPException(status_code=404, detail="File not found")
+        except Exception as e:
+            print(f"Error during classification process: {str(e)}")
+            import traceback
+            print(traceback.format_exc())
+            raise HTTPException(status_code=500, detail=f"Classification error: {str(e)}")
+    except Exception as e:
+        print(f"Unexpected error in classification endpoint: {str(e)}")
+        import traceback
+        print(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Server error during classification: {str(e)}")

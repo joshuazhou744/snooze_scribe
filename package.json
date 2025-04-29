@@ -1,0 +1,26 @@
+{
+  "name": "snooze_scribe",
+  "version": "1.0.0",
+  "description": "Free sleep recorder so I don't have to pay for one on the app store",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:api\"",
+    "dev:client": "cd client && npm run dev",
+    "dev:api": "cd api && uvicorn main:app --reload"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joshuazhou744/snooze_scribe.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/joshuazhou744/snooze_scribe/issues"
+  },
+  "homepage": "https://github.com/joshuazhou744/snooze_scribe#readme",
+  "dependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

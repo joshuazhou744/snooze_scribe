@@ -1,26 +1,21 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useAuth0 } from '@auth0/auth0-react';
 import { useNavigate } from 'react-router-dom';
 
 const Callback = () => {
-    const {handleRedirectCallback, isAuthenticated} = useAuth0();
+    const { isLoading, error } = useAuth0();
     const navigate = useNavigate();
 
     useEffect(() => {
-    const processRedirect = async () => {
-        try {
-        await handleRedirectCallback();
-        navigate('/');
-        } catch (error) {
-        console.error("Error handling redirect callback:", error);
+        // Let Auth0Provider handle the callback automatically
+        if (!isLoading && !error) {
+            navigate('/');
         }
-        }
-    if (!isAuthenticated) {
-        processRedirect();
-      } else {
-        navigate('/');
-      }
-    }, [handleRedirectCallback, navigate, isAuthenticated]);
+    }, [isLoading, error, navigate]);
+
+    if (error) {
+        return <div>Authentication Error: {error.message}</div>;
+    }
 
     return <div>Loading...</div>;
 };

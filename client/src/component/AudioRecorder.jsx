@@ -19,6 +19,7 @@ const AudioRecorder = () => {
   const [token, setToken] = useState(null);
   const [energyLog, setEnergyLog] = useState([]);
   const [wakeLock, setWakeLock] = useState(null); // keeps screen on during the night for IOS Mobile Users because Webkit API is terrible and halts all background processes past a grace period on sleep
+  const [classifying, setClassifying] = useState(null); // Track which file is being classified
   const recorderRef = useRef(null);
   const mediaStreamRef = useRef(null)
   const apiUrl = import.meta.env.VITE_API_URL;
@@ -268,6 +269,38 @@ const AudioRecorder = () => {
     setEnergyThreshold(avg)
   }
 
+  const handleClassify = async (fileId) => {
+    try {
+      setClassifying(fileId);
+      const token = await getAccessTokenSilently({
+        audience: audience,
+      });
+      
+      const response = await axios.post(`${apiUrl}/classify-audio/${fileId}`, {}, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Update the file's classification in the local state
+      setAudioFiles(prevFiles => 
+        prevFiles.map(file => 
+          file.file_id === fileId 
+            ? { 
+                ...file, 
+                classification: response.data.classification,
+                confidence: response.data.confidence
+              } 
+            : file
+        )
+      );
+      
+      console.log(`File ${fileId} classified as ${response.data.classification} with confidence ${response.data.confidence}`);
+    } catch (error) {
+      console.error("Error classifying file:", error);
+    } finally {
+      setClassifying(null);
+    }
+  };
+
   return (
   <div className="container">
     <div className="header">
@@ -321,15 +354,34 @@ const AudioRecorder = () => {
         <ul className="audio-files-list">
           {audioFiles.map((file) => (
             <li key={file.file_id} className="audio-file-item">
-              <span className="file-name">{file.filename}</span>
+              <div className="file-header">
+                <span className="file-name">{file.filename}</span>
+                {file.classification && file.classification !== "unclassified" && (
+                  <span className={`classification-badge ${file.classification}`}>
+                    Class: {file.classification} ({(file.confidence * 100).toFixed(0)}%)
+                  </span>
+                )}
+              </div>
               <div className="file-actions">
                 <Waveform
                   audioUrl={`${apiUrl}/${file.audio_url}`}
                   token={token}
                 />
-                <button onClick={() => handleDelete(file.file_id)} className="delete-button">
-                  Delete
-                </button>
+                <div className="file-buttons">
+                  <button 
+                    onClick={() => handleClassify(file.file_id)} 
+                    className="classify-button"
+                    disabled={classifying === file.file_id}
+                  >
+                    {classifying === file.file_id ? 'Classifying...' : 'Classify'}
+                  </button>
+                  <button 
+                    onClick={() => handleDelete(file.file_id)} 
+                    className="delete-button"
+                  >
+                    Delete
+                  </button>
+                </div>
               </div>
             </li>
           ))}

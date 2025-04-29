@@ -327,14 +327,70 @@ cursor: not-allowed;
 .delete-button {
 background-color: #f44336;
 color: white;
+width: 50%;
 }
 
 .delete-button:hover {
 background-color: #e53935;
 }
 
+/* File Classification */
+.file-header {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 8px;
+  width: 100%;
+}
 
- /* Responsive Styles */
+.classification-badge {
+  display: inline-block;
+  margin-top: 20px;
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
+  color: white;
+  width: 130px;
+}
+
+.classification-badge.snore {
+  background-color: #e74c3c;
+}
+
+.classification-badge.other {
+  background-color: #3498db;
+  padding: 10px;
+
+}
+
+.file-buttons {
+  display: flex;
+  gap: 10px;
+  margin-top: 5px;
+}
+
+.classify-button {
+  background-color: #9b59b6;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.3s ease;
+  width: 50%;
+}
+
+.classify-button:hover {
+  background-color: #8e44ad;
+}
+
+.classify-button:disabled {
+  background-color: #d2b4de;
+  cursor: not-allowed;
+}
+
+/* Media Queries */
 @media (max-width: 600px) {
   /* General Container */
   .container {
@@ -536,5 +592,15 @@ background-color: #e53935;
   h2.section-title,
   h3.section-subtitle {
     margin-top: 0;
+  }
+
+  .file-buttons {
+    flex-direction: column;
+    gap: 5px;
+  }
+  
+  .classification-badge {
+    font-size: 10px;
+    padding: 2px 6px;
   }
 }

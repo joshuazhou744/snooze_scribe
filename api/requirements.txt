@@ -11,3 +11,6 @@ python-jose
 authlib
 requests
 ffmpeg
+torch
+librosa
+scikit-learn
