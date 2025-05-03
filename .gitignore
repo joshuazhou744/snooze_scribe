@@ -5,5 +5,9 @@ node_modules
 package-lock.json
 
 snooze_model/train_data/*
-snooze_model/holdout_dataset/*
+snooze_model/holdout_data/*
 snooze_model/labels.csv
+snooze_model/predictions.csv
+
+api/audio_classifier.pth
+api/__pycache__/*

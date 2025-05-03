@@ -108,6 +108,7 @@ class EfficientAudioClassifier(torch.nn.Module):
 # Global variables for model and device
 classification_model = None
 device = None
+normalization_params = None  # Store normalization parameters globally
 
 # Load the trained model
 def load_classification_model():
@@ -128,7 +129,7 @@ def load_classification_model():
         
         if model_path is None:
             print(f"ERROR: Model file not found in any of: {possible_paths}")
-            return None, device
+            return None, device, None  # Return None for normalization
             
         print(f"Found model at: {model_path}")
             
@@ -148,23 +149,39 @@ def load_classification_model():
             
             if 'model_state_dict' not in checkpoint:
                 print(f"ERROR: Invalid checkpoint format, 'model_state_dict' not found. Available keys: {checkpoint.keys()}")
-                return None, device
+                return None, device, None  # Return None for normalization
+            
+            # Get normalization parameters from the checkpoint
+            norm_params = None
+            if 'normalization' in checkpoint:
+                norm_params = {
+                    'mean': checkpoint['normalization']['mean'],
+                    'std': checkpoint['normalization']['std']
+                }
+                print(f"Loaded normalization parameters: mean={norm_params['mean']}, std={norm_params['std']}")
+            else:
+                # Fallback to hardcoded values if not in checkpoint
+                norm_params = {
+                    'mean': -65.2772445678711,
+                    'std': 17.052316665649414
+                }
+                print(f"WARNING: Using hardcoded normalization values: mean={norm_params['mean']}, std={norm_params['std']}")
                 
             model.load_state_dict(checkpoint['model_state_dict'])
             model.to(device)
             model.eval()  # Set to evaluation mode
             print(f"Successfully loaded classification model from {model_path}")
-            return model, device
+            return model, device, norm_params
         except Exception as e:
             print(f"ERROR loading model state: {e}")
             import traceback
             print(traceback.format_exc())
-            return None, device
+            return None, device, None  # Return None for normalization
     except Exception as e:
         print(f"ERROR in load_classification_model: {e}")
         import traceback
         print(traceback.format_exc())
-        return None, device
+        return None, device, None  # Return None for normalization
 
 # Extract features from audio for classification (updated for efficient model)
 def extract_features(audio_data, sample_rate=44100, n_mels=64, fixed_length=44100*15):
@@ -198,15 +215,7 @@ def extract_features(audio_data, sample_rate=44100, n_mels=64, fixed_length=4410
         log_mel_spec = librosa.power_to_db(mel_spec, ref=np.max)
         print(f"Log mel spectrogram shape: {log_mel_spec.shape}, min: {np.min(log_mel_spec)}, max: {np.max(log_mel_spec)}")
         
-        # Normalize features
-        mean, std = -30.0, 12.0  # Example values, replace with your actual training values
-        print(f"Normalizing with mean={mean}, std={std}")
-        normalized_features = (log_mel_spec - mean) / std
-        
-        tensor = torch.tensor(normalized_features, dtype=torch.float32)
-        print(f"Final tensor shape: {tensor.shape}, min: {torch.min(tensor)}, max: {torch.max(tensor)}")
-        
-        return tensor
+        return log_mel_spec  # Return raw features WITHOUT normalization
     except Exception as e:
         print(f"ERROR in extract_features: {e}")
         import traceback
@@ -374,13 +383,13 @@ async def stop_recording():
 
 @app.on_event("startup")
 async def startup_event():
-    global classification_model, device
+    global classification_model, device, normalization_params
     print("Starting application, loading classification model...")
-    classification_model, device = load_classification_model()
+    classification_model, device, normalization_params = load_classification_model()
     if classification_model is None:
         print("WARNING: Classification model failed to load. Classification endpoints will return 500 errors.")
-    else:
-        print("Classification model loaded successfully and ready for inference.")
+    elif normalization_params is None:
+        print("WARNING: Normalization parameters not loaded. Classification may not be accurate.")
 
 
 @app.post("/upload-audio")
@@ -499,18 +508,39 @@ async def classify_audio(file_id: str, authorization: str = Header(None)):
                 raise HTTPException(status_code=500, detail="Could not extract features from audio file")
             print(f"Features extracted, shape: {features.shape}")
             
+            # Normalize features
+            print("Normalizing features")
+            if normalization_params is None:
+                print("WARNING: Normalization parameters not loaded")
+                raise HTTPException(status_code=500, detail="Model normalization parameters not available")
+            else:
+                print(f"Using normalization parameters: mean={normalization_params['mean']}, std={normalization_params['std']}")
+                features = (features - normalization_params['mean']) / normalization_params['std']
+            
+            # Convert to tensor
+            features = torch.tensor(features, dtype=torch.float32)
+            print(f"Final tensor shape: {features.shape}")
+                
             # Make prediction
             print("Running model prediction")
             with torch.no_grad():
                 features = features.to(device)
                 outputs = classification_model(features.unsqueeze(0))  # Add batch dimension
                 probabilities = torch.nn.functional.softmax(outputs, dim=1)
-                confidence, predicted = torch.max(probabilities, 1)
-                print(f"Raw prediction: {predicted.item()}, confidence: {confidence.item()}")
+                
+                # Get prediction for class 1 (snore)
+                snore_prob = probabilities[0][1].item()
+                print(f"Raw snore probability: {snore_prob}")
+                
+                # Get highest probability class
+                _, predicted = torch.max(probabilities, 1)
+                pred_class = predicted.item()
+                pred_confidence = probabilities[0][pred_class].item()
+                print(f"Predicted class: {pred_class}, confidence: {pred_confidence}")
                 
             # Map prediction to class name
             class_names = ["other", "snore"]
-            classification = class_names[predicted.item()]
+            classification = class_names[pred_class]
             print(f"Classification result: {classification}")
             
             # Update the file metadata in MongoDB with classification result
@@ -518,14 +548,14 @@ async def classify_audio(file_id: str, authorization: str = Header(None)):
             db_collection = client["audio"][f"{hashlib.sha256(user_id.encode('utf-8')).hexdigest()}.files"]
             await db_collection.update_one(
                 {"_id": ObjectId(file_id)},
-                {"$set": {"classification": classification, "confidence": float(confidence.item())}}
+                {"$set": {"classification": classification, "confidence": float(pred_confidence)}}
             )
             print("MongoDB document updated successfully")
             
             return {
                 "file_id": file_id,
                 "classification": classification,
-                "confidence": float(confidence.item())
+                "confidence": float(pred_confidence)
             }
             
         except NoFile as e:

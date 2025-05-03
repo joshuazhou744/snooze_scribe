@@ -355,12 +355,12 @@ background-color: #e53935;
 
 .classification-badge.snore {
   background-color: #e74c3c;
+  padding: 10px;
 }
 
 .classification-badge.other {
   background-color: #3498db;
   padding: 10px;
-
 }
 
 .file-buttons {

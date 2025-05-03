@@ -167,6 +167,10 @@ def main():
     if set(unique_labels) != {0, 1}:
         raise ValueError(f"Labels should be binary (0 and 1). Found labels: {unique_labels}")
     print(f"Labels are binary: {unique_labels}")
+    
+    # Count class distribution
+    class_counts = labels_df['label'].value_counts()
+    print(f"Class distribution: {class_counts.to_dict()}")
 
     # Create datasets
     train_dataset_full = AudioDataset(audio_path, labels_dict, sample_rate, n_mels, fixed_length, augment=True)
@@ -286,10 +290,123 @@ def main():
     torch.save({
         'model_state_dict': model.state_dict(),
         'optimizer_state_dict': optimizer.state_dict(),
+        'normalization': {'mean': mean, 'std': std}  # Save normalization parameters
     }, model_save_path)
     
     print(f"Model saved to {model_save_path}")
     print(f"Model size: {os.path.getsize(model_save_path) / (1024 * 1024):.2f} MB")
 
+def predict(holdout_path, model_path='audio_classifier.pth', output_path='predictions.csv'):
+    """
+    Run prediction on a holdout dataset of audio files
+    
+    Args:
+        holdout_path: Path to directory with holdout audio files
+        model_path: Path to the saved model file
+        output_path: Path to save prediction results
+    """
+    # Audio processing parameters - must match training parameters
+    sample_rate = 44100
+    n_mels = 64
+    fixed_time = 15  # seconds
+    fixed_length = sample_rate * fixed_time
+    
+    # Set device
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    print(f"Using device: {device}")
+    
+    # Load model
+    num_classes = 2
+    model = EfficientAudioClassifier(num_classes, n_mels, fixed_length, sample_rate)
+    
+    checkpoint = torch.load(model_path, map_location=device)
+    model.load_state_dict(checkpoint['model_state_dict'])
+    model.to(device)
+    model.eval()
+    
+    print(f"Model loaded from {model_path}")
+    
+    # Get normalization parameters from the checkpoint
+    if 'normalization' in checkpoint:
+        mean = checkpoint['normalization']['mean']
+        std = checkpoint['normalization']['std']
+        print(f"Using normalization parameters from checkpoint: mean={mean}, std={std}")
+    else:
+        # Fallback to hardcoded values if not in checkpoint
+        mean = -65.2772445678711
+        std = 17.052316665649414
+        print(f"WARNING: Using hardcoded normalization values: mean={mean}, std={std}")
+    
+    # Get list of audio files
+    audio_files = [f for f in os.listdir(holdout_path) if f.endswith('.mp4')]
+    print(f"Found {len(audio_files)} audio files in holdout dataset")
+    
+    results = []
+    class_counts = {0: 0, 1: 0}  # Track prediction distribution
+    
+    with torch.no_grad():
+        for file_id in audio_files:
+            file_path = os.path.join(holdout_path, file_id)
+            
+            # Extract features
+            features = extract_features(file_path, sample_rate, n_mels, fixed_length)
+            
+            if features is None:
+                print(f"Error processing {file_id}, skipping")
+                results.append((file_id, -1, 0.0))  # Use -1 to mark errors
+                continue
+                
+            # Normalize features
+            features = (features - mean) / std
+            
+            # Convert to tensor
+            features = torch.tensor(features, dtype=torch.float32).unsqueeze(0)  # Add batch dimension
+            features = features.to(device)
+            
+            # Get prediction
+            outputs = model(features)
+            probability = torch.nn.functional.softmax(outputs, dim=1)
+            _, predicted = torch.max(outputs.data, 1)
+            
+            # Store result
+            pred_label = predicted.item()
+            pred_prob = probability[0][pred_label].item()
+            
+            # Update class counts
+            class_counts[pred_label] += 1
+            
+            # Also include probability of being class 1 (snore)
+            snore_prob = probability[0][1].item()
+            
+            results.append((file_id, pred_label, snore_prob))
+            
+    # Print prediction distribution
+    print(f"Prediction distribution: {class_counts}")
+    
+    # Save results
+    results_df = pd.DataFrame(results, columns=['file_id', 'prediction', 'snore_probability'])
+    results_df.to_csv(output_path, index=False)
+    print(f"Predictions saved to {output_path}")
+    
+    # If all predictions are the same class, provide warning
+    if len(class_counts) == 1 or min(class_counts.values()) == 0:
+        print("WARNING: All predictions are the same class. This suggests a problem with:")
+        print("1. Normalization parameters - They should match training exactly")
+        print("2. Class imbalance - Your training data may be heavily skewed")
+        print("3. Model training - Try training longer or with different hyperparameters")
+    
+    return results_df
+
 if __name__ == '__main__':
-    main()
+    import sys
+    
+    if len(sys.argv) > 1 and sys.argv[1] == 'predict':
+        # If called with 'predict' argument, run prediction
+        holdout_path = sys.argv[2] if len(sys.argv) > 2 else './holdout_data'
+        model_path = sys.argv[3] if len(sys.argv) > 3 else 'audio_classifier.pth'
+        output_path = sys.argv[4] if len(sys.argv) > 4 else 'predictions.csv'
+        
+        predict(holdout_path, model_path, output_path)
+    else:
+        # otherwise run training
+        main()
