@@ -12,5 +12,5 @@ snooze_model/predictions.csv
 api/audio_classifier.pth
 api/__pycache__/*
 
-snooze-scribe-api-production/*
-snooze-scribe-api-production/api/*
+snooze-scribe-api-production/
+snooze-scribe-model/
