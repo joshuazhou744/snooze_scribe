@@ -301,6 +301,29 @@ const AudioRecorder = () => {
     }
   };
 
+  const handleDeleteAll = async () => {
+    // Add confirmation dialog
+    const confirmed = window.confirm("Are you sure you want to delete ALL audio files? This action cannot be undone.");
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const token = await getAccessTokenSilently({
+        audience: audience,
+      });
+      await axios.delete(`${apiUrl}/audio-files/all`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      })
+      console.log("All audio files deleted")
+      setAudioFiles([]);
+    } catch (error) {
+      console.error("Error deleting all files:", error);
+    }
+  }
+
   return (
   <div className="container">
     <div className="header">
@@ -351,6 +374,7 @@ const AudioRecorder = () => {
 
       <div className="audio-files-section">
         <h3 className="section-subtitle">Audio Files</h3>
+        <button className="delete-all-button" onClick={handleDeleteAll}>Delete All</button>
         <ul className="audio-files-list">
           {audioFiles.map((file) => (
             <li key={file.file_id} className="audio-file-item">

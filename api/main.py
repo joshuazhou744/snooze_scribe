@@ -451,8 +451,6 @@ async def play_audio(file_id: str, authorization: str = Header(None)):
                     yield from mp4_file
                if os.path.exists(mp4_path):
                     os.remove(mp4_path)"""
-
-          print("stream successfully")
           return StreamingResponse(grid_out, media_type="audio/mp4; codecs=mp4a.40.2") # stream audio response
      except Exception as e:
           raise HTTPException(status_code=404, detail=f"File not found: {e}")
@@ -470,6 +468,34 @@ async def delete_audio_file(file_id: str, authorization: str = Header(None)):
           raise HTTPException(status_code=404, detail="File not found")
      except Exception as e:
           raise HTTPException(status_code=404, detail=f"An error occurred: {e}")
+
+@app.delete("/audio-files/all")
+async def delete_all_audio_files(authorization: str = Header(None)):
+     token = get_auth_token(authorization)
+     user_id = verify_jwt_token(token)
+     
+     gridfs_files = get_user_gridfs(user_id)
+     try:
+          # Find all files for the user
+          cursor = gridfs_files.find()
+          files = await cursor.to_list(None)
+          
+          if not files:
+               return {"message": "No files found to delete"}
+          
+          # Delete each file
+          deleted_count = 0
+          for file in files:
+               try:
+                    await gridfs_files.delete(file['_id'])
+                    deleted_count += 1
+               except Exception as e:
+                    print(f"Error deleting file {file['_id']}: {e}")
+                    continue
+          
+          return {"message": f"Successfully deleted {deleted_count} audio files"}
+     except Exception as e:
+          raise HTTPException(status_code=500, detail=f"An error occurred while deleting files: {e}")
      
 @app.on_event("shutdown")
 async def shutdown_event():
