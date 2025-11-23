@@ -9,6 +9,7 @@ snooze_model/holdout_data/*
 snooze_model/labels.csv
 snooze_model/predictions.csv
 snooze_model/audio_classifier.pth
+snooze_model/train_data/
 
 api/audio_classifier.pth
 api/__pycache__/*

@@ -1,7 +1,7 @@
-import React from 'react'
-import { useAuth0 } from '@auth0/auth0-react'
+import PropTypes from 'prop-types';
+import { useAuth0 } from '@auth0/auth0-react';
 
-export default function LoginButton({className, isAuthenticated}) {
+function LoginButton({ className = '', isAuthenticated = false }) {
 
     const { loginWithRedirect } = useAuth0();
     const handleLogin = () => {
@@ -12,3 +12,10 @@ export default function LoginButton({className, isAuthenticated}) {
 
   return <button disabled={isAuthenticated} onClick={handleLogin} className={`auth-button ${className}`}>Log In</button>
 }
+
+LoginButton.propTypes = {
+  className: PropTypes.string,
+  isAuthenticated: PropTypes.bool,
+};
+
+export default LoginButton;

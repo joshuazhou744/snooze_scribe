@@ -1,7 +1,7 @@
-import React from 'react'
-import { useAuth0 } from '@auth0/auth0-react'
+import PropTypes from 'prop-types';
+import { useAuth0 } from '@auth0/auth0-react';
 
-export default function LogoutButton({className }) {
+function LogoutButton({ className = '' }) {
 
     const {logout} = useAuth0();
 
@@ -18,3 +18,9 @@ export default function LogoutButton({className }) {
     </button>
   )
 }
+
+LogoutButton.propTypes = {
+  className: PropTypes.string,
+};
+
+export default LogoutButton;

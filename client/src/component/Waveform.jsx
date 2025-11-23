@@ -1,41 +1,65 @@
-import { useEffect, useRef, useState, useMemo, useCallback } from 'react';
-import { useWavesurfer } from '@wavesurfer/react'
-import Timeline from 'wavesurfer.js/dist/plugins/timeline.esm.js'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import PropTypes from 'prop-types';
+import { useWavesurfer } from '@wavesurfer/react';
+import Timeline from 'wavesurfer.js/dist/plugins/timeline.esm.js';
 import axios from 'axios';
 
-export default function Waveform({audioUrl, token}) {
-  const waveformRef = useRef(null)
-  const [blob, setBlob] = useState(null)
+const formatTime = (seconds = 0) =>
+  [seconds / 60, seconds % 60]
+    .map((value) => `0${Math.floor(value)}`.slice(-2))
+    .join(':');
+
+function Waveform({ audioUrl, token = null }) {
+  const waveformRef = useRef(null);
+  const [blobUrl, setBlobUrl] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
+    if (!audioUrl || !token) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+
     const fetchAudio = async () => {
+      setIsLoading(true);
       try {
         const response = await axios.get(audioUrl, {
           responseType: 'blob',
-          headers: {
-            Authorization: `Bearer ${token}`
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        });
+        const url = URL.createObjectURL(response.data);
+        setBlobUrl((prev) => {
+          if (prev) {
+            URL.revokeObjectURL(prev);
           }
-        })
-
-        const audioBlob = response.data
-        const url = URL.createObjectURL(audioBlob)
-        setBlob(url)
-      } catch (err) {
-        console.error("Error fetching blob: ", err)
+          return url;
+        });
+      } catch {
+        setBlobUrl((prev) => {
+          if (prev) {
+            URL.revokeObjectURL(prev);
+          }
+          return null;
+        });
+      } finally {
+        setIsLoading(false);
       }
-    }
-    if (audioUrl && token) {
-      fetchAudio();
-    }
+    };
+
+    fetchAudio();
+
     return () => {
-      if (blob) {
-        URL.revokeObjectURL(blob)
-        setBlob(null)
-      }
-    }
-  }, [audioUrl, token])
-
-  const formatTime = (seconds) => [seconds / 60, seconds % 60].map((v) => `0${Math.floor(v)}`.slice(-2)).join(':')
+      controller.abort();
+      setBlobUrl((prev) => {
+        if (prev) {
+          URL.revokeObjectURL(prev);
+        }
+        return null;
+      });
+    };
+  }, [audioUrl, token]);
 
   const { wavesurfer, isPlaying, currentTime } = useWavesurfer({
     container: waveformRef,
@@ -43,23 +67,30 @@ export default function Waveform({audioUrl, token}) {
     waveColor: 'violet',
     progressColor: 'purple',
     cursorColor: 'navy',
-    url: blob,
+    url: blobUrl,
     plugins: useMemo(() => [Timeline.create()], []),
-  })
+  });
 
-  const onPlayPause = useCallback(() => {
-    wavesurfer && wavesurfer.playPause()
-  }, [wavesurfer])
+  const handlePlayPause = useCallback(() => {
+    if (wavesurfer) {
+      wavesurfer.playPause();
+    }
+  }, [wavesurfer]);
 
   return (
-    <>
-      <div ref={waveformRef}/>
-
-      <p>Current time: {formatTime(currentTime)}</p>
-
-      <button onClick={onPlayPause} style={{ minWidth: '5em' }} className='play-button'>
-          {isPlaying ? 'Pause' : 'Play'}
+    <div className="waveform-wrapper">
+      <div ref={waveformRef} />
+      <p>{isLoading ? 'Loading…' : `Current time: ${formatTime(currentTime)}`}</p>
+      <button onClick={handlePlayPause} style={{ minWidth: '5em' }} className="play-button" disabled={!blobUrl}>
+        {isPlaying ? 'Pause' : 'Play'}
       </button>
-    </>
-  )
+    </div>
+  );
 }
+
+Waveform.propTypes = {
+  audioUrl: PropTypes.string.isRequired,
+  token: PropTypes.string,
+};
+
+export default Waveform;

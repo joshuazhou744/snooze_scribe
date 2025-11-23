@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Auth0ProviderWithHistory from './auth/Auth0Provider';
 import AudioRecorder from './component/AudioRecorder';

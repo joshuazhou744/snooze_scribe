@@ -1,8 +1,8 @@
-import React from "react";
 import { Auth0Provider } from "@auth0/auth0-react";
 import {useNavigate} from "react-router-dom"
+import PropTypes from 'prop-types';
 
-export default function Auth0ProviderWithHistory({children}) {
+export default function Auth0ProviderWithHistory({ children = null }) {
   
     const navigate = useNavigate();
 
@@ -34,3 +34,7 @@ export default function Auth0ProviderWithHistory({children}) {
         </div>
   )
 }
+
+Auth0ProviderWithHistory.propTypes = {
+  children: PropTypes.node,
+};
