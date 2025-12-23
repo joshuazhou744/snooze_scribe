@@ -17,7 +17,6 @@ import {
 import './AudioRecorder.css';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL;
-const AUTH0_AUDIENCE = import.meta.env.VITE_AUTH0_AUDIENCE;
 const FETCH_INTERVAL_MS = 20_000;
 const AUTO_DELETE_INTERVAL_MS = 120 * 60 * 1000;
 const MAX_AUDIO_FILES = 500;
@@ -36,13 +35,12 @@ const parseRecordingDate = (filename) => {
 const formatEnergyValue = (value) => Number(value.toFixed(5));
 
 function AudioRecorder() {
-  const { isAuthenticated, user, getAccessTokenSilently } = useAuth0();
+  const { isAuthenticated, user } = useAuth0();
   const [audioFiles, setAudioFiles] = useState([]);
   const [energyThreshold, setEnergyThreshold] = useState(0.05);
   const [energyLog, setEnergyLog] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
   const [classifyingId, setClassifyingId] = useState(null);
-  const [authToken, setAuthToken] = useState(null);
 
   const recorderRef = useRef(null);
   const mediaStreamRef = useRef(null);
@@ -55,27 +53,31 @@ function AudioRecorder() {
     return `sleep_recording_${formattedDate}.mp4`;
   }, []);
 
-  const fetchToken = useCallback(async () => {
-    const token = await getAccessTokenSilently({ audience: AUTH0_AUDIENCE });
-    setAuthToken(token);
-    return token;
-  }, [getAccessTokenSilently]);
+  const stopRecording = useCallback(() => {
+    if (!isRecordingRef.current) {
+      return;
+    }
 
-  const withAuth = useCallback(
-    async (fn) => {
-      const token = await fetchToken();
-      return fn(token);
-    },
-    [fetchToken]
-  );
+    recorderRef.current?.stopRecording();
+    recorderRef.current = null;
+    setIsRecording(false);
+    isRecordingRef.current = false;
+
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
+      mediaStreamRef.current = null;
+    }
+
+    releaseWakeLock();
+  }, [releaseWakeLock]);
 
   const loadAudioFiles = useCallback(async () => {
     if (!isAuthenticated || !user) {
       return;
     }
-    const files = await withAuth((token) => fetchAudioFiles(token));
+    const files = await fetchAudioFiles();
     setAudioFiles(files);
-  }, [isAuthenticated, user, withAuth]);
+  }, [isAuthenticated, user, fetchAudioFiles]);
 
   const requestWakeLock = useCallback(async () => {
     if (!('wakeLock' in navigator) || typeof navigator.wakeLock?.request !== 'function') {
@@ -123,10 +125,10 @@ function AudioRecorder() {
 
   const uploadAudioChunk = useCallback(
     async (audioBlob) => {
-      await withAuth((token) => uploadAudioFile(token, audioBlob, getFileName()));
+      await uploadAudioFile(audioBlob, getFileName());
       await loadAudioFiles();
     },
-    [getFileName, loadAudioFiles, withAuth]
+    [getFileName, loadAudioFiles, uploadAudioFile]
   );
 
   const processAudioChunk = useCallback(
@@ -182,30 +184,12 @@ function AudioRecorder() {
     await requestWakeLock();
   }, [handleRecorderData, isRecording, requestWakeLock]);
 
-  const stopRecording = useCallback(() => {
-    if (!isRecordingRef.current) {
-      return;
-    }
-
-    recorderRef.current?.stopRecording();
-    recorderRef.current = null;
-    setIsRecording(false);
-    isRecordingRef.current = false;
-
-    if (mediaStreamRef.current) {
-      mediaStreamRef.current.getTracks().forEach((track) => track.stop());
-      mediaStreamRef.current = null;
-    }
-
-    releaseWakeLock();
-  }, [releaseWakeLock]);
-
   const handleDelete = useCallback(
     async (fileId) => {
-      await withAuth((token) => deleteAudioFile(token, fileId));
+      await deleteAudioFile(fileId);
       setAudioFiles((prev) => prev.filter((file) => file.file_id !== fileId));
     },
-    [withAuth]
+    [deleteAudioFile]
   );
 
   const deleteExpiredFiles = useCallback(async () => {
@@ -232,7 +216,7 @@ function AudioRecorder() {
     async (fileId) => {
       try {
         setClassifyingId(fileId);
-        const result = await withAuth((token) => classifyAudioFile(token, fileId));
+        const result = await classifyAudioFile(fileId);
         setAudioFiles((prev) =>
           prev.map((file) =>
             file.file_id === fileId
@@ -248,7 +232,7 @@ function AudioRecorder() {
         setClassifyingId(null);
       }
     },
-    [withAuth]
+    [classifyAudioFile]
   );
 
   const handleDeleteAll = useCallback(async () => {
@@ -256,9 +240,9 @@ function AudioRecorder() {
     if (!confirmed) {
       return;
     }
-    await withAuth((token) => deleteAllAudioFiles(token));
+    await deleteAllAudioFiles();
     setAudioFiles([]);
-  }, [withAuth]);
+  }, [deleteAllAudioFiles]);
 
   const clearEnergyLog = useCallback(() => {
     setEnergyLog([]);
@@ -290,6 +274,15 @@ function AudioRecorder() {
     const intervalId = setInterval(deleteExpiredFiles, AUTO_DELETE_INTERVAL_MS);
     return () => clearInterval(intervalId);
   }, [deleteExpiredFiles, isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      return;
+    }
+    setAudioFiles([]);
+    setEnergyLog([]);
+    stopRecording();
+  }, [isAuthenticated, stopRecording]);
 
   useEffect(() => {
     return () => {
@@ -335,7 +328,6 @@ function AudioRecorder() {
         <AudioFilesList
           files={audioFiles}
           apiBaseUrl={API_BASE_URL}
-          authToken={authToken}
           onClassify={handleClassify}
           onDelete={handleDelete}
           onDeleteAll={handleDeleteAll}
@@ -344,7 +336,6 @@ function AudioRecorder() {
       </div>
     );
   }, [
-    authToken,
     audioFiles,
     classifyingId,
     handleClassify,

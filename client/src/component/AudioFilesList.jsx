@@ -11,7 +11,6 @@ const formatConfidence = (confidence) => {
 function AudioFilesList({
   files,
   apiBaseUrl,
-  authToken = null,
   onClassify,
   onDelete,
   classifyingId = null,
@@ -42,7 +41,7 @@ function AudioFilesList({
                   )}
                 </div>
                 <div className="file-actions">
-                  <Waveform audioUrl={`${apiBaseUrl}/${file.audio_url}`} token={authToken} />
+                  <Waveform audioUrl={`${apiBaseUrl}/${file.audio_url}`} />
                   <div className="file-buttons">
                     <button
                       onClick={() => onClassify(file.file_id)}
@@ -76,7 +75,6 @@ AudioFilesList.propTypes = {
     })
   ).isRequired,
   apiBaseUrl: PropTypes.string.isRequired,
-  authToken: PropTypes.string,
   onClassify: PropTypes.func.isRequired,
   onDelete: PropTypes.func.isRequired,
   onDeleteAll: PropTypes.func.isRequired,

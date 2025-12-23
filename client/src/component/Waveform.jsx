@@ -2,20 +2,20 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { useWavesurfer } from '@wavesurfer/react';
 import Timeline from 'wavesurfer.js/dist/plugins/timeline.esm.js';
-import axios from 'axios';
+import apiClient from '../services/apiClient';
 
 const formatTime = (seconds = 0) =>
   [seconds / 60, seconds % 60]
     .map((value) => `0${Math.floor(value)}`.slice(-2))
     .join(':');
 
-function Waveform({ audioUrl, token = null }) {
+function Waveform({ audioUrl }) {
   const waveformRef = useRef(null);
   const [blobUrl, setBlobUrl] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
-    if (!audioUrl || !token) {
+    if (!audioUrl) {
       return undefined;
     }
 
@@ -24,9 +24,8 @@ function Waveform({ audioUrl, token = null }) {
     const fetchAudio = async () => {
       setIsLoading(true);
       try {
-        const response = await axios.get(audioUrl, {
+        const response = await apiClient.get(audioUrl, {
           responseType: 'blob',
-          headers: { Authorization: `Bearer ${token}` },
           signal: controller.signal,
         });
         const url = URL.createObjectURL(response.data);
@@ -59,7 +58,7 @@ function Waveform({ audioUrl, token = null }) {
         return null;
       });
     };
-  }, [audioUrl, token]);
+  }, [audioUrl]);
 
   const { wavesurfer, isPlaying, currentTime } = useWavesurfer({
     container: waveformRef,
@@ -90,7 +89,6 @@ function Waveform({ audioUrl, token = null }) {
 
 Waveform.propTypes = {
   audioUrl: PropTypes.string.isRequired,
-  token: PropTypes.string,
 };
 
 export default Waveform;

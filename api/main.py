@@ -51,7 +51,6 @@ class Settings(BaseModel):
             "https://snooze-scribe.vercel.app",
             "http://localhost:5173",
             "http://127.0.0.1:5173",
-            "https://snooze-scribe-api-production-7c27c458ab69.herokuapp.com",
         }
         extra_origins = {
             origin.strip()
