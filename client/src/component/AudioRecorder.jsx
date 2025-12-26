@@ -53,6 +53,21 @@ function AudioRecorder() {
     return `sleep_recording_${formattedDate}.mp4`;
   }, []);
 
+  const requestWakeLock = useCallback(async () => {
+    if (!('wakeLock' in navigator) || typeof navigator.wakeLock?.request !== 'function') {
+      return;
+    }
+    wakeLockRef.current = await navigator.wakeLock.request('screen');
+  }, []);
+
+  const releaseWakeLock = useCallback(async () => {
+    if (!wakeLockRef.current) {
+      return;
+    }
+    await wakeLockRef.current.release();
+    wakeLockRef.current = null;
+  }, []);
+
   const stopRecording = useCallback(() => {
     if (!isRecordingRef.current) {
       return;
@@ -78,21 +93,6 @@ function AudioRecorder() {
     const files = await fetchAudioFiles();
     setAudioFiles(files);
   }, [isAuthenticated, user, fetchAudioFiles]);
-
-  const requestWakeLock = useCallback(async () => {
-    if (!('wakeLock' in navigator) || typeof navigator.wakeLock?.request !== 'function') {
-      return;
-    }
-    wakeLockRef.current = await navigator.wakeLock.request('screen');
-  }, []);
-
-  const releaseWakeLock = useCallback(async () => {
-    if (!wakeLockRef.current) {
-      return;
-    }
-    await wakeLockRef.current.release();
-    wakeLockRef.current = null;
-  }, []);
 
   const calculateRMS = useCallback((blob) => {
     return new Promise((resolve, reject) => {
